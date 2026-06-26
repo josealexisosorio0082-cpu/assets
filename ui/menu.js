@@ -169,6 +169,7 @@
     },
 
     renderAllIcons() {
+        console.log("Slip Game: Renderizando iconos...");
         const icons = [
             { id: 'icon_free', type: 'free' }, { id: 'icon_global', type: 'global' },
             { id: 'icon_missions', type: 'missions' }, { id: 'icon_pass', type: 'pass' },
@@ -181,17 +182,36 @@
             { id: 'icon_split', type: 'split' }, { id: 'icon_eject', type: 'eject' },
             { id: 'icon_pause', type: 'pause' }, { id: 'icon_lb_toggle', type: 'lb_toggle' }
         ];
+
+        if (!window.VisualEffects) {
+            console.warn("VisualEffects no disponible para renderAllIcons, reintentando...");
+            setTimeout(() => this.renderAllIcons(), 100);
+            return;
+        }
+
         icons.forEach(icon => {
-            const el = document.getElementById(icon.id); if (!el) return;
-            const canvas = document.createElement('canvas');
-            const size = icon.id.includes('hud') || icon.id.includes('shop') ? 24 : 32;
-            canvas.width = size * 2; canvas.height = size * 2;
-            canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
-            const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-            if (icon.type === 'coin') window.VisualEffects.drawSlipCoin(ctx, size/2, size/2, size * 0.4);
-            else if (icon.type === 'dna') window.VisualEffects.drawDNA(ctx, size/2, size/2, size * 0.4);
-            else window.VisualEffects.drawUIIcon(ctx, size/2, size/2, size * 0.4, icon.type);
-            el.innerHTML = ''; el.appendChild(canvas);
+            const el = document.getElementById(icon.id);
+            if (!el) return;
+
+            try {
+                const canvas = document.createElement('canvas');
+                const isHud = icon.id.includes('hud') || icon.id.includes('shop');
+                const size = isHud ? 20 : 28;
+
+                canvas.width = size * 2; canvas.height = size * 2;
+                canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+                const ctx = canvas.getContext('2d');
+                ctx.scale(2, 2);
+
+                if (icon.type === 'coin') window.VisualEffects.drawSlipCoin(ctx, size/2, size/2, size * 0.45);
+                else if (icon.type === 'dna') window.VisualEffects.drawDNA(ctx, size/2, size/2, size * 0.45);
+                else window.VisualEffects.drawUIIcon(ctx, size/2, size/2, size * 0.45, icon.type);
+
+                el.innerHTML = '';
+                el.appendChild(canvas);
+            } catch (e) {
+                console.error("Error renderizando icono " + icon.id, e);
+            }
         });
     },
 
@@ -576,15 +596,29 @@
     },
 
     updateMenuUI() {
+        console.log("Slip Game: Actualizando UI del Menú...");
         let data = JSON.parse(localStorage.getItem('slip_prog') || "{\"lvl\":1, \"xp\":0}");
         const p = window.progression || { passLevel: data.lvl, slipXP: data.xp, rankPoints: 0 };
         const rank = this.getRankInfo(p.rankPoints || 0);
+
         const rBadge = document.getElementById('rankBadge'), rName = document.getElementById('rankNameDisplay');
-        if (rBadge) { rBadge.className = `rank-emblem ${rank.class}`; rBadge.innerHTML = `<span style="font-size: 9px; font-weight: 950; color: #fff;">${rank.tag}</span>`; }
-        if (rName) { rName.innerText = `Rango: ${rank.name}`; rName.style.color = rank.class === 'god' ? '#a855f7' : '#94a3b8'; }
+        if (rBadge) {
+            rBadge.className = `rank-emblem ${rank.class}`;
+            rBadge.innerHTML = `<span class="rank-tag-text">${rank.tag}</span>`;
+            rBadge.style.borderColor = rank.color;
+            rBadge.style.boxShadow = `0 0 15px ${rank.color}44`;
+        }
+
+        if (rName) {
+            rName.innerHTML = `<span style="color:${rank.color}; filter: drop-shadow(0 0 5px ${rank.color}66);">${rank.name}</span>`;
+        }
+
         const uNameDisp = document.getElementById('userNameDisplay');
-        if (uNameDisp) uNameDisp.innerHTML = `${this.user.name} <span style="font-size: 0.65rem; color: #94a3b8;">(Nivel ${p.passLevel})</span>`;
-        const bar = document.getElementById('profileXPFill'); if (bar) bar.style.width = `${Math.min(100, (p.slipXP / 1000) * 100)}%`;
+        if (uNameDisp) uNameDisp.innerHTML = `${this.user.name} <span style="font-size: 0.65rem; color: #94a3b8; opacity: 0.7;">Lvl ${p.passLevel}</span>`;
+
+        const bar = document.getElementById('profileXPFill');
+        if (bar) bar.style.width = `${Math.min(100, (p.slipXP / 1000) * 100)}%`;
+
         this.updateShopCurrencies();
         this.syncSkinImages();
     },
@@ -597,7 +631,7 @@
             const seed = parseInt(this.currentSkin.split('_')[1]) || 1000, cv = document.createElement('canvas'); cv.width = 150; cv.height = 150;
             if (window.VisualEffects) { window.VisualEffects.drawProceduralSkin(cv.getContext('2d'), 75, 75, 60, seed); finalUrl = cv.toDataURL(); }
         }
-        ['userAvatar', 'profileAvatarLarge', 'currentSkinImg'].forEach(id => { const el = document.getElementById(id); if (el) el.src = finalUrl; });
+        ['userAvatar', 'profileAvatarLarge'].forEach(id => { const el = document.getElementById(id); if (el) el.src = finalUrl; });
         if (this.user) { this.user.picture = finalUrl; localStorage.setItem('slip_user_data', JSON.stringify(this.user)); }
         localStorage.setItem('selectedSkin', this.currentSkin);
     },
@@ -617,10 +651,11 @@
     },
 
     getRankInfo(rp) {
-        if (rp >= 2500) return { name: "Deidad", class: "god", tag: "DIOS" };
-        if (rp >= 1200) return { name: "Espectro", class: "alpha", tag: "ESP" };
-        if (rp >= 200) return { name: "Mutante", class: "noob", tag: "MUT" };
-        return { name: "Virus", class: "noob", tag: "VIR" };
+        if (rp >= 5000) return { name: "OVERLORD", class: "god", tag: "Ω", color: "#facc15" };
+        if (rp >= 2500) return { name: "TITÁN", class: "titan", tag: "T", color: "#a855f7" };
+        if (rp >= 1200) return { name: "PREDADOR", class: "predator", tag: "P", color: "#ef4444" };
+        if (rp >= 400) return { name: "CYBORG", class: "cyborg", tag: "C", color: "#3b82f6" };
+        return { name: "VIRUS", class: "virus", tag: "V", color: "#94a3b8" };
     },
 
     showGameOver(mass, stats) {
