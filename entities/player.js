@@ -21,13 +21,19 @@ const Player = {
 
         this.level = data.lvl;
         this.gameState = "PLAYING"; this.isDead = false;
+
+        // Cargar Masa Extra de la Tienda
+        const bonusMass = parseInt(localStorage.getItem('slip_bonus_mass') || 0);
+        const startMass = 30 + bonusMass;
+        const startRadius = 30 * Math.sqrt(startMass / 30);
+
         this.cells = [{
-            x: 2500, y: 2500, mass: 30, radius: 30, visualRadius: 30, targetRadius: 30,
+            x: 2500, y: 2500, mass: startMass, radius: startRadius, visualRadius: startRadius, targetRadius: startRadius,
             vx: 0, vy: 0, mergeTimer: 0,
-            points: this.initSpringPoints(30),
+            points: this.initSpringPoints(startRadius),
             seed: Math.random() * 100
         }];
-        this.maxMass = 30;
+        this.maxMass = startMass;
         if (window.Engine) window.Engine.startTime = Date.now();
     },
 

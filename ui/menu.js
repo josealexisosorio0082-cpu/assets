@@ -389,8 +389,18 @@
         if (!item) return;
         const balance = parseInt(localStorage.getItem(item.type === 'coins' ? 'slipCoins' : 'slipDna') || 0);
         if (balance >= item.price) {
+            // Cobrar
             if (item.type === 'coins') window.Engine.addCoins(-item.price);
             else window.Engine.addDna(-item.price);
+
+            // Entregar Recompensa
+            if (cat === 'coins') window.Engine.addCoins(100);
+            else if (cat === 'dna') window.Engine.addDna(2);
+            else if (cat === 'mass') {
+                let m = parseInt(localStorage.getItem('slip_bonus_mass') || 0);
+                localStorage.setItem('slip_bonus_mass', m + (item.id === 'mass_1' ? 50 : 150));
+            }
+
             alert(`¡Comprado: ${item.name}!`);
             this.updateMenuUI();
             this.renderShopItems(cat);
@@ -433,12 +443,12 @@
         } else if (['coins','dna'].includes(cat)) {
             const v = document.getElementById('shopCurrencyView');
             if(v) v.classList.add('active');
-            title.innerText = cat === 'coins' ? "Slip Coins" : "ADN";
+            title.innerText = cat === 'coins' ? "Dinero" : "Laboratorio";
             this.renderShopItems(cat);
         } else if (['mass','speed','potions'].includes(cat)) {
             const v = document.getElementById('shopItemsView');
             if(v) v.classList.add('active');
-            title.innerText = cat==='mass'?'Masa':(cat==='speed'?'Velocidad':'Pociones');
+            title.innerText = cat==='mass'?'Maza':(cat==='speed'?'Velocidad':'Pociones');
             this.renderShopItems(cat);
         }
     },

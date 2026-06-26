@@ -60,6 +60,9 @@ const Bots = {
         const w = (window.World && window.World.width > 0) ? window.World.width : 5000;
         const h = (window.World && window.World.height > 0) ? window.World.height : 5000;
 
+        const angle = Math.random() * Math.PI * 2;
+        const skinKey = "skins gratis/Free (1).png"; // Skin base por defecto para bots
+
         return {
             id: this.nextId++,
             name: this.names[Math.floor(Math.random() * this.names.length)],

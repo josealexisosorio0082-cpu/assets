@@ -54,17 +54,21 @@ var Engine = {
         let totalGames = parseInt(localStorage.getItem('slip_total_games') || 0);
         localStorage.setItem('slip_total_games', totalGames + 1);
 
+        // MÓDULO 4: Inicialización segura de estado
+        this.initEconomy();
+
         if (this.isStarted) {
             this.resetPlayArea();
         } else {
             this.isStarted = true;
-            this.initEconomy();
             HUD.init();
             Food.generate();
             Bots.generate(50);
             Virus.generate(15);
-            Player.startGame(); // BUG FIX: Call startGame on first start
+            Player.startGame();
             this.updateControlUI();
+
+            // Iniciar el loop solo si no está ya corriendo
             gameLoop();
         }
 
@@ -81,6 +85,11 @@ var Engine = {
             window.canvas.style.pointerEvents = 'auto';
             resizeCanvas();
         }
+
+        // Asegurar que la cámara esté sobre el jugador inmediatamente
+        const center = Player.getCenter();
+        window.camera.x = center.x - window.innerWidth / 2;
+        window.camera.y = center.y - window.innerHeight / 2;
     },
 
     resetPlayArea() {
