@@ -174,6 +174,24 @@
             }
         });
 
+        bind('alertConfirmBtn', () => {
+            const modal = document.getElementById('alertModal');
+            if (modal) {
+                modal.classList.remove('is-open');
+                setTimeout(() => { modal.style.display = 'none'; }, 300);
+            }
+            if (this._alertCallback) this._alertCallback();
+        });
+
+        bind('alertSecondaryBtn', () => {
+            const modal = document.getElementById('alertModal');
+            if (modal) {
+                modal.classList.remove('is-open');
+                setTimeout(() => { modal.style.display = 'none'; }, 300);
+            }
+            if (this._alertSecondaryCallback) this._alertSecondaryCallback();
+        });
+
         bind('btnEmote', () => this.toggleEmotePicker());
 
         const updateName = (e) => {
@@ -345,9 +363,13 @@
         });
         filtered.forEach(key => {
             const s = this.skins[key], isSelected = this.currentSkin === key, locked = s.level > prog.lvl;
-            const owned = purchased.includes(key) || (s.price === 0 && !s.level && !s.exclusive) || (s.price === 0 && !s.exclusive && !locked);
+            const isFree = (s.price === 0 && !s.level && !s.exclusive) || (s.price === 0 && !s.exclusive && !locked);
+            const owned = purchased.includes(key) || isFree;
             const card = document.createElement('div'); card.className = `skin-card ${isSelected ? 'active' : ''} rarity-${s.rarity.toLowerCase()}`;
+
             let btnTxt = isSelected ? "EQUIPADA" : (owned ? "SELECCIONAR" : (locked ? `NIVEL ${s.level}` : (s.exclusive ? "BLOQUEADO" : `💰 ${s.price}`)));
+            if (isFree && !purchased.includes(key) && !isSelected) btnTxt = "OBTENER";
+
             let btnCol = isSelected ? "#22c55e" : (owned ? "#3b82f6" : (locked ? "#475569" : (s.exclusive ? "#475569" : "#f59e0b")));
 
             card.innerHTML = `
@@ -360,12 +382,73 @@
                 <button class="item-price-btn" style="background:${btnCol};">${btnTxt}</button>
             `;
             if (key.startsWith('procedural_')) setTimeout(() => { const cv = document.getElementById(`cv_${key}`); if(cv) window.VisualEffects.drawProceduralSkin(cv.getContext('2d'), 45, 45, 40, parseInt(key.split('_')[1])); }, 0);
-            card.onclick = () => { if (owned) { this.currentSkin = key; this.updateMenuUI(); this.renderSkinList(); } else if (locked || s.exclusive) alert(s.req || "Nivel insuficiente"); else this.buySkin(key); };
+
+            card.onclick = () => {
+                if (isSelected) return;
+                if (owned) {
+                    if (isFree && !purchased.includes(key)) {
+                        this.unlockFreeSkin(key);
+                    } else {
+                        this.currentSkin = key;
+                        this.updateMenuUI();
+                        this.renderSkinList();
+                    }
+                } else if (locked || s.exclusive) {
+                    this.showAlert("PROTOCOLO BLOQUEADO", s.req || `Alcanza el nivel ${s.level} para desbloquear este aspecto.`, "🔒");
+                } else {
+                    this.buySkin(key);
+                }
+            };
             grid.appendChild(card);
         });
     },
 
+    unlockFreeSkin(key) {
+        const s = this.skins[key];
+        const userId = this.user ? this.user.id : 'guest';
+        let p = JSON.parse(localStorage.getItem(`purchasedSkins_${userId}`) || "[]");
+        if (!p.includes(key)) p.push(key);
+        localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(p));
+
+        this.showAlert("SKIN OBTENIDA", `¡Has desbloqueado el aspecto ${s.name} exitosamente!`, "✨", () => {
+            this.currentSkin = key;
+            this.updateMenuUI();
+            this.renderSkinList();
+        });
+    },
+
     filterSkins(f) { this.currentSkinFilter = f; document.querySelectorAll('.shop-tab').forEach(t => t.classList.toggle('active', t.getAttribute('onclick').includes(f))); this.renderSkinList(); },
+
+    showAlert(title, message, icon = "⚠️", onConfirm = null, onSecondary = null, confirmText = "ACEPTAR", secondaryText = "CANCELAR") {
+        const modal = document.getElementById('alertModal');
+        const titleEl = document.getElementById('alertTitle');
+        const msgEl = document.getElementById('alertMessage');
+        const iconEl = document.getElementById('alertIcon');
+        const confirmBtn = document.getElementById('alertConfirmBtn');
+        const secondaryBtn = document.getElementById('alertSecondaryBtn');
+
+        if (!modal) return;
+
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+        iconEl.innerText = icon;
+        confirmBtn.innerText = confirmText;
+
+        if (onSecondary) {
+            secondaryBtn.style.display = 'block';
+            secondaryBtn.innerText = secondaryText;
+            document.getElementById('alertActions').style.gridTemplateColumns = '1fr 1fr';
+        } else {
+            secondaryBtn.style.display = 'none';
+            document.getElementById('alertActions').style.gridTemplateColumns = '1fr';
+        }
+
+        this._alertCallback = onConfirm;
+        this._alertSecondaryCallback = onSecondary;
+
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('is-open'), 50);
+    },
 
     buySkin(key) {
         const s = this.skins[key];
@@ -373,11 +456,10 @@
 
         const cur = parseInt(localStorage.getItem('slipCoins') || 0);
         if (cur >= s.price) {
-            if (confirm(`¿Comprar ${s.name}?`)) {
-                // Sincronización Triple (Memoria, UI, Almacenamiento)
+            this.showAlert("CONFIRMAR COMPRA", `¿Deseas adquirir ${s.name} por ${s.price} Slip Coins?`, "💰", () => {
                 const newBalance = cur - s.price;
                 localStorage.setItem('slipCoins', newBalance);
-                if (window.progression) window.progression.slipCoins = newBalance; // Si se usa en progression
+                if (window.progression) window.progression.slipCoins = newBalance;
 
                 let p = JSON.parse(localStorage.getItem(`purchasedSkins_${this.user.id}`) || "[]");
                 if (!p.includes(key)) p.push(key);
@@ -388,9 +470,13 @@
                 this.renderSkinList();
                 this.updateShopCurrencies();
                 this.syncCloud();
-            }
+
+                this.showAlert("¡COMPRA EXITOSA!", `Aspecto ${s.name} equipado.`, "✨");
+            }, () => {}, "COMPRAR", "CANCELAR");
         } else {
-            alert("Slip Coins insuficientes para esta skin.");
+            this.showAlert("SALDO INSUFICIENTE", `Te faltan ${s.price - cur} Slip Coins para este aspecto. ¿Quieres conseguir más ahora?`, "💎", () => {
+                this.openShopCategory('coins');
+            }, () => {}, "IR A LA TIENDA", "LUEGO");
         }
     },
 
@@ -581,7 +667,7 @@
         if (!item) return;
 
         if (item.type === 'usd') {
-            if (confirm(`¿Confirmar compra de ${item.name} por $${item.price}?`)) {
+            this.showAlert("COMPRA PREMIUM", `¿Deseas adquirir ${item.name} por $${item.price}?`, "💎", () => {
                 // MÓDULO DE PAGO REAL (Simulado)
                 if (window.AndroidBridge && window.AndroidBridge.processPurchase) {
                     window.AndroidBridge.processPurchase(item.id, item.price);
@@ -591,17 +677,26 @@
                     const r = item.reward;
                     if (r.type === 'coins') window.Engine.addCoins(r.value);
                     else if (r.type === 'dna') window.Engine.addDna(r.value);
-                    alert(`¡TRANSACCIÓN EXITOSA!\nHas recibido ${r.value} ${r.type.toUpperCase()}.`);
+                    this.showAlert("PAGO COMPLETADO", `¡Has recibido ${r.value} ${r.type.toUpperCase()}!`, "✅");
                 }
                 this.updateMenuUI();
-                return;
-            }
+            }, () => {}, "COMPRAR", "CANCELAR");
             return;
         }
 
         const balance = parseInt(localStorage.getItem(item.type === 'coins' ? 'slipCoins' : 'slipDna') || 0);
         if (balance >= item.price) {
-            if (confirm(`¿Comprar ${item.name}?`)) {
+            let confirmTitle = "CONFIRMAR COMPRA";
+            let confirmMsg = `¿Deseas comprar ${item.name} por ${item.price} ${item.type === 'coins' ? 'Monedas' : 'ADN'}?`;
+            let confirmBtn = "ADQUIRIR";
+
+            if (item.price === 0) {
+                confirmTitle = "OBJETO GRATUITO";
+                confirmMsg = `¿Deseas obtener ${item.name} gratis?`;
+                confirmBtn = "OBTENER";
+            }
+
+            this.showAlert(confirmTitle, confirmMsg, item.icon, () => {
                 // Cobrar
                 if (item.type === 'coins') window.Engine.addCoins(-item.price);
                 else window.Engine.addDna(-item.price);
@@ -631,12 +726,18 @@
                     }
                 }
 
-                alert(`¡Comprado: ${item.name}!`);
+                this.showAlert("¡ITEM ADQUIRIDO!", `${item.name} ha sido añadido a tu inventario.`, "✅");
                 this.updateMenuUI();
                 this.renderShopItems(cat);
-            }
+            }, () => {}, confirmBtn, "CANCELAR");
         }
-        else alert("Saldo insuficiente");
+        else {
+            const missing = item.price - balance;
+            const currencyName = item.type === 'coins' ? 'Slip Coins' : 'ADN';
+            this.showAlert("SALDO INSUFICIENTE", `Te faltan ${missing} ${currencyName}. ¿Quieres ir al Market a recargar y obtener ventajas exclusivas?`, "💰", () => {
+                this.openShopCategory(item.type === 'coins' ? 'coins' : 'dna');
+            }, () => {}, "RECARGAR AHORA", "LUEGO");
+        }
     },
 
     drawSkinTexture(ctx, x, y, r, skinKey, isBot = false) {
