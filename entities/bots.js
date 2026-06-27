@@ -2,11 +2,14 @@ const Bots = {
     items: [],
     nextId: 1,
     names: [
-        "Shadow", "Luna", "Rex", "Mika", "Neon", "Valen", "Kai", "Sofi", "Dante", "Nova",
-        "Max", "Nico", "Zoe", "Leo", "Mia", "Alpha", "Beta", "Gamer123", "ProKiller", "Sky",
-        "Storm", "Blaze", "Frost", "Pixel", "Vortex", "Bolt", "Titan", "Echo", "Ghost", "Rider",
-        "Sniper", "Astra", "Zero", "Omega", "Kira", "Finn", "Raven", "Ace", "Solo", "Hunter",
-        "Drake", "Luna_X", "Slayer", "Toxin", "Swift", "Rogue", "Mystic", "Crimson", "Shadow_Pro", "NoobMaster"
+        "Shadow_Hunter", "Luna.Sky", "Rex_Gaming", "Mika-07", "NeonVibe", "Valen_Pro", "Kai_YT", "Sofi_Gamer", "Dante.X", "Nova_Prime",
+        "Maximus", "Nico_02", "Zoe_Kawaii", "Leo_TheGreat", "Mia.Slip", "Alpha_Omega", "Beta_Tester", "Gamer123_ES", "ProKiller_99", "Sky_Walker",
+        "Storm_Blade", "Blaze_Fire", "Frost_Bite", "Pixel_Master", "Vortex_Void", "Bolt_Zap", "Titan_Power", "Echo_Sound", "Ghost_Rider", "Rider_X",
+        "Sniper_Elite", "Astra_Zen", "Zero_Cool", "Omega_God", "Kira_Death", "Finn_TheHuman", "Raven_Dark", "Ace_High", "Solo_Player", "Hunter_Kill",
+        "Drake_Flame", "Luna_Love", "Slayer_666", "Toxin_Cloud", "Swift_Foot", "Rogue_Shadow", "Mystic_Moon", "Crimson_Red", "Shadow_Pro_9", "NoobMaster_69",
+        "El_Pro_Alex", "Juanito_Gamer", "Maria_Slip", "Sofia.Player", "Carlos_X", "Gael_G", "Luisa_Neon", "Diego_Killer", "Valentina_S", "Mateo_Pro",
+        "GhostFace", "Raptor_Z", "Cobra_K", "Delta_V", "Sigma_X", "Iron_Man_Fan", "Spider_G", "Thor_God", "Hulk_Smash", "Batman_Ark",
+        "Slip_Master", "Neon_Soul", "Grid_Walker", "Vector_X", "Matrix_Re", "Binary_One", "Logic_Pro", "Flow_God", "Zen_Master", "Void_Walker"
     ],
     RANKS: {
         VIRUS: { id: 'virus', name: 'Virus', color: '#cd7f32' },
@@ -61,7 +64,15 @@ const Bots = {
         const h = (window.World && window.World.height > 0) ? window.World.height : 5000;
 
         const angle = Math.random() * Math.PI * 2;
-        const skinKey = "skins gratis/Free (1).png"; // Skin base por defecto para bots
+
+        // MÓDULO DE SKINS: Selección aleatoria de skin para que parezcan jugadores reales
+        let skinKey = "ui/images/skins gratis/Free (1).png";
+        if (window.Menu && window.Menu.skins) {
+            const keys = Object.keys(window.Menu.skins);
+            if (keys.length > 0) {
+                skinKey = keys[Math.floor(Math.random() * keys.length)];
+            }
+        }
 
         return {
             id: this.nextId++,
@@ -84,7 +95,10 @@ const Bots = {
             target: null,
             pursuerCount: 0,
             waver: Math.random() * Math.PI * 2, // Para movimiento natural
-            reactionDelay: tier === "pro" ? 0 : (tier === "intermediate" ? 5 : 12)
+            reactionDelay: tier === "pro" ? 0 : (tier === "intermediate" ? 5 : 12),
+            activeEmote: null,
+            emoteTimer: 0,
+            mistakeTimer: 0
         };
     },
 
@@ -169,6 +183,12 @@ const Bots = {
 
             bot.x += bot.vx * dtFactor; bot.y += bot.vy * dtFactor;
 
+            // Actualizar Emotes de Bots
+            if (bot.emoteTimer > 0) {
+                bot.emoteTimer -= dtFactor;
+                if (bot.emoteTimer <= 0) bot.activeEmote = null;
+            }
+
             this.handleCollisions(bot, i, threshold, dt);
 
             const rLerp = 1 - Math.pow(1 - 0.1, dtFactor);
@@ -189,6 +209,32 @@ const Bots = {
         const dtFactor = dt / 16.6;
         let forceX = 0, forceY = 0;
         const viewDist = bot.tier === "pro" ? 1100 : (bot.tier === "intermediate" ? 800 : 500);
+
+        // MÓDULO DE COMPORTAMIENTO HUMANO: Errores y distracciones
+        if (bot.mistakeTimer > 0) {
+            bot.mistakeTimer -= dtFactor;
+            // Durante un error, el bot se mueve erráticamente o se queda quieto
+            bot.tx += (Math.random() - 0.5) * 0.2;
+            bot.ty += (Math.random() - 0.5) * 0.2;
+            return;
+        }
+
+        // Probabilidad de distracción (más común en novatos)
+        const distractionChance = bot.tier === "pro" ? 0.001 : (bot.tier === "intermediate" ? 0.005 : 0.015);
+        if (Math.random() < distractionChance * dtFactor) {
+            bot.mistakeTimer = 30 + Math.random() * 60;
+            if (Math.random() < 0.3) this.triggerBotEmote(bot, "🤔");
+            return;
+        }
+
+        // MÓDULO DE ESTRATEGIA: Baiting (Cebo)
+        // El bot se queda quieto o se mueve lento para atraer a presas
+        if (bot.tier === "pro" && bot.mass > 500 && !closestThreat && Math.random() < 0.002 * dtFactor) {
+            bot.mistakeTimer = 40; // Se queda quieto 40 frames
+            bot.tx = 0; bot.ty = 0;
+            if (Math.random() < 0.5) this.triggerBotEmote(bot, "😴");
+            return;
+        }
 
         bot.waver += 0.05 * dtFactor;
         const waverAmount = bot.tier === "pro" ? 0.05 : 0.15;
@@ -221,6 +267,10 @@ const Bots = {
         if (closestThreat) {
             const dx = bot.x - closestThreat.x, dy = bot.y - closestThreat.y;
             const d = Math.max(1, Math.sqrt(dx*dx + dy*dy));
+
+            // Reacción humana al peligro
+            if (d < 300 && Math.random() < 0.05) this.triggerBotEmote(bot, "😱");
+
             let escapeX = dx / d, escapeY = dy / d;
             if (bot.tier === "pro" && minDistThreat < 300) {
                 const angle = Math.atan2(dy, dx) + (Math.random() > 0.5 ? 0.4 : -0.4);
@@ -357,11 +407,16 @@ const Bots = {
 
                     if (bot.mass > other.mass * massDiff && dist < bot.radius - other.radius * 0.39) {
                         if (other.type === 'player') {
-                            // Si el bot come al jugador, el jugador maneja su muerte en su update
-                            // pero aquí podemos dar feedback visual
+                            // Si el bot come al jugador
+                            this.triggerBotEmote(bot, "😂");
                         } else {
                             bot.mass += other.mass * 0.85;
                             bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
+
+                            // Reacción humana al comer a otro bot
+                            if (Math.random() < 0.2) this.triggerBotEmote(bot, "😋");
+                            else if (other.mass > 500 && Math.random() < 0.5) this.triggerBotEmote(bot, "🔥");
+
                             const botIdx = this.items.indexOf(other);
                             if (botIdx !== -1) {
                                 this.items.splice(botIdx, 1);
@@ -401,6 +456,11 @@ const Bots = {
             bot.mass -= 2;
             Food.addEjectedMass(bot.x, bot.y, (dx/d)*15, (dy/d)*15, bot);
         }
+    },
+
+    triggerBotEmote(bot, emote) {
+        bot.activeEmote = emote;
+        bot.emoteTimer = 120; // 2 segundos aprox
     },
 
 
@@ -473,6 +533,17 @@ const Bots = {
         }
 
         ctx.restore();
+
+        // MÓDULO DE EMOTES HUMANIZADOS
+        if (bot.activeEmote) {
+            ctx.save();
+            ctx.font = `${r * 0.8}px Inter`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const bounce = Math.sin(Date.now() * 0.01) * 5;
+            ctx.fillText(bot.activeEmote, vcx, vcy - r - 30 + bounce);
+            ctx.restore();
+        }
 
         // MÓDULO 2: Renderizado de Insignia
         if (window.VisualEffects && window.VisualEffects.drawBadge && bot.rank) {

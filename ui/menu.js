@@ -373,7 +373,7 @@
         if (this.skins[cleanKey]) return;
 
         const img = new Image();
-        img.crossOrigin = "anonymous";
+        // Eliminado crossOrigin para evitar problemas en Android WebView con file:///
         img.onload = () => {
             console.log(`[Scanner] Skin Registrada: ${cleanKey}`);
             this.processDetectedSkin(cleanKey, img, type);
@@ -461,23 +461,19 @@
         if (type === 'premium') {
             price = 500 + Math.floor(Math.random() * 9000);
             rarity = complexity > 80 ? 'ÉPICA' : 'RARE';
-            name = "PREMIUM UNIT";
         } else if (type === 'tactical') {
             level = 2 + Math.floor(Math.random() * 48);
             rarity = level > 25 ? 'ÉPICA' : 'COMÚN';
-            name = "LVL PROTOCOL";
         } else {
             price = 0;
             rarity = 'COMÚN';
-            name = "BASIC SKIN";
         }
 
-        // Refinar nombre basado en el archivo si es posible
+        // --- SISTEMA DE NOMBRES BASADO EN ARCHIVO (Para todas las categorías) ---
         if (id.includes('/')) {
             const fileName = id.split('/').pop().split('.')[0];
-            if (!fileName.includes('skin') && !fileName.includes('Free') && !fileName.includes('Premium')) {
-                name = fileName.replace(/[()]/g, '').trim();
-            }
+            // Limpiar nombre: quitar paréntesis, guiones bajos y espacios extra
+            name = fileName.replace(/[()_]/g, ' ').trim();
         }
 
         return { price, level, rarity, name };
@@ -528,16 +524,16 @@
 
             // FILTRO BASADO EN LA RUTA NORMALIZADA (Identifica la carpeta de origen)
             if (this.currentSkinFilter === 'premium') {
-                return lowKey.includes('slip coins') || (lowKey.includes('premium') && !s.exclusive);
+                return lowKey.includes('slip coins') && !lowKey.includes('exclusive');
             }
             if (this.currentSkinFilter === 'level') {
-                return lowKey.includes('por nivel') || (lowKey.includes('nivel') && !s.exclusive);
+                return lowKey.includes('por nivel') && !lowKey.includes('exclusive');
             }
             if (this.currentSkinFilter === 'free') {
-                return lowKey.includes('skins gratis') || (lowKey.includes('free') && !s.exclusive);
+                return lowKey.includes('skins gratis') && !lowKey.includes('exclusive');
             }
             if (this.currentSkinFilter === 'exclusive') {
-                return s.exclusive || lowKey.includes('exclusiva');
+                return s.exclusive || lowKey.includes('exclusivas') || lowKey.includes('exclusive');
             }
             return false;
         });
@@ -969,7 +965,13 @@
             const v = document.getElementById('shopItemsView');
             if(v) v.classList.add('active');
             title.innerText = "EVOLUCIÓN";
-            if (window.EvolutionLab) window.EvolutionLab.renderLab();
+            // Forzar renderizado inmediato del laboratorio
+            if (window.EvolutionLab) {
+                window.EvolutionLab.renderLab();
+            } else {
+                console.warn("EvolutionLab no cargado aún, reintentando...");
+                setTimeout(() => { if(window.EvolutionLab) window.EvolutionLab.renderLab(); }, 100);
+            }
         } else if (cat === 'mystery') {
             const v = document.getElementById('shopItemsView');
             if(v) v.classList.add('active');
@@ -1089,10 +1091,10 @@
         try {
             const pSkins = localStorage.getItem(`purchasedSkins_${userId}`);
             if (!pSkins || pSkins === "undefined" || pSkins === "null") {
-                localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(["skins gratis/Free (1).png"]));
+                localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(["ui/images/skins gratis/Free (1).png"]));
             }
         } catch(e) {
-            localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(["skins gratis/Free (1).png"]));
+            localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(["ui/images/skins gratis/Free (1).png"]));
         }
 
         document.getElementById('userNameDisplay').innerText = this.user.name;
@@ -1162,10 +1164,43 @@
     syncCloud() { if (this.user && window.AndroidBridge) window.AndroidBridge.saveToCloud(JSON.stringify({ name: this.user.name, coins: localStorage.getItem('slipCoins') })); },
 
     startGame() {
-        const name = document.getElementById('playerName').value.trim() || this.user.name;
-        Player.name = name; Player.skinKey = this.currentSkin;
-        if (this.user.id === 'guest') localStorage.setItem('guest_name', name);
-        this.switchState(this.STATES.JUEGO); if (window.Engine) window.Engine.start();
+        console.log("Slip Game: Iniciando partida...");
+        const name = document.getElementById('playerName').value.trim() || (this.user ? this.user.name : "Invitado");
+
+        // Asegurar que haya una skin seleccionada
+        if (!this.currentSkin) {
+            console.warn("Slip Game: No hay skin seleccionada, buscando fallback...");
+            const skinKeys = Object.keys(this.skins);
+            if (skinKeys.length > 0) {
+                this.currentSkin = skinKeys[0];
+            } else {
+                this.currentSkin = "ui/images/skins gratis/Free (1).png";
+            }
+        }
+
+        if (window.Player) {
+            window.Player.name = name;
+            window.Player.skinKey = this.currentSkin;
+        }
+
+        if (this.user && this.user.id === 'guest') {
+            localStorage.setItem('guest_name', name);
+        }
+
+        // Cambiar estado y arrancar motor
+        this.switchState(this.STATES.JUEGO);
+
+        if (window.Engine) {
+            try {
+                window.Engine.start();
+            } catch (e) {
+                console.error("Error crítico al arrancar Engine:", e);
+                this.showAlert("ERROR DE SISTEMA", "No se pudo iniciar el motor del juego. Reintentando...", "⚠️", () => location.reload());
+            }
+        } else {
+            console.error("Engine no encontrado en window");
+            this.showAlert("ERROR DE SISTEMA", "El motor del juego no está cargado.", "⚠️", () => location.reload());
+        }
     },
 
     getRankInfo(rp) {

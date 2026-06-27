@@ -1,5 +1,5 @@
 const Player = {
-    name: "Jugador", skinKey: "skins gratis/Free (1).png", isDead: false, gameState: "MENU",
+    name: "Jugador", skinKey: "ui/images/skins gratis/Free (1).png", isDead: false, gameState: "MENU",
     cells: [], maxMass: 0, level: 1,
     killStreak: 0, lastKillTime: 0, equippedAura: localStorage.getItem('slip_equipped_aura') || null,
     activeEmote: null, bonusSpeed: 0,
@@ -14,14 +14,18 @@ const Player = {
     isPlaying() { return this.gameState === "PLAYING"; },
 
     startGame() {
+        console.log("Player: startGame() invocado");
         let data = {lvl:1, xp:0};
         try {
             const saved = localStorage.getItem('slip_prog');
             if (saved && saved !== "undefined") data = JSON.parse(saved);
-        } catch (e) {}
+        } catch (e) {
+            console.warn("Error cargando slip_prog:", e);
+        }
 
-        this.level = data.lvl;
-        this.gameState = "PLAYING"; this.isDead = false;
+        this.level = data.lvl || 1;
+        this.gameState = "PLAYING";
+        this.isDead = false;
 
         // Cargar Masa Extra de la Tienda y Laboratorio
         const permMass = parseInt(localStorage.getItem('slip_bonus_mass') || 0);
@@ -29,7 +33,7 @@ const Player = {
 
         // Bonus de Evolución (NUEVO)
         const evoData = window.EvolutionLab ? window.EvolutionLab.getUpgradeData() : { mass: 0, speed: 0, resistance: 0 };
-        const evoMassBonus = evoData.mass * 5;
+        const evoMassBonus = (evoData.mass || 0) * 5;
 
         localStorage.setItem('slip_temp_mass', 0); // Consumir para esta partida
         const startMass = 30 + permMass + tempMass + evoMassBonus;
@@ -38,13 +42,16 @@ const Player = {
         // Cargar Velocidad Extra
         const permSpeed = parseFloat(localStorage.getItem('slip_bonus_speed') || 0);
         const tempSpeed = parseFloat(localStorage.getItem('slip_temp_speed') || 0);
-        const evoSpeedBonus = evoData.speed * 0.01;
+        const evoSpeedBonus = (evoData.speed || 0) * 0.01;
 
         localStorage.setItem('slip_temp_speed', 0); // Consumir
         this.bonusSpeed = permSpeed + tempSpeed + evoSpeedBonus;
 
+        const startX = (window.CONFIG && window.CONFIG.player) ? window.CONFIG.player.startX : 2500;
+        const startY = (window.CONFIG && window.CONFIG.player) ? window.CONFIG.player.startY : 2500;
+
         this.cells = [{
-            x: 2500, y: 2500, mass: startMass, radius: startRadius, visualRadius: startRadius, targetRadius: startRadius,
+            x: startX, y: startY, mass: startMass, radius: startRadius, visualRadius: startRadius, targetRadius: startRadius,
             vx: 0, vy: 0, mergeTimer: 0,
             points: this.initSpringPoints(startRadius),
             seed: Math.random() * 100

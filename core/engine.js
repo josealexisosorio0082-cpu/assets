@@ -47,55 +47,68 @@ var Engine = {
     controlMode: localStorage.getItem('slip_control_mode') || (('ontouchstart' in window) ? 'touch' : 'pc'),
 
     start: function() {
-        console.log("Iniciando motor del juego...");
-        this.isPaused = false;
-        this.startTime = Date.now();
-        this.lastTime = performance.now();
-        this.deltaTime = 0;
+        console.log("Slip Game: Engine.start() invocado");
+        try {
+            this.isPaused = false;
+            this.startTime = Date.now();
+            this.lastTime = performance.now();
+            this.deltaTime = 0;
 
-        // Incrementar total de partidas
-        let totalGames = parseInt(localStorage.getItem('slip_total_games') || 0);
-        localStorage.setItem('slip_total_games', totalGames + 1);
+            // Incrementar total de partidas
+            let totalGames = parseInt(localStorage.getItem('slip_total_games') || 0);
+            localStorage.setItem('slip_total_games', totalGames + 1);
 
-        // MÓDULO 4: Inicialización segura de estado
-        this.initEconomy();
+            // MÓDULO 4: Inicialización segura de estado
+            this.initEconomy();
 
-        if (this.isStarted) {
-            this.resetPlayArea();
-        } else {
-            this.isStarted = true;
-            const w = (window.World && window.World.width) ? window.World.width : 5000;
-            const h = (window.World && window.World.height) ? window.World.height : 5000;
-            SpatialGrid.init(w, h, 200);
-            HUD.init();
-            Food.generate();
-            Bots.generate(50);
-            Virus.generate(15);
-            Player.startGame();
-            this.updateControlUI();
+            if (this.isStarted) {
+                this.resetPlayArea();
+            } else {
+                this.isStarted = true;
+                const w = (window.World && window.World.width) ? window.World.width : 5000;
+                const h = (window.World && window.World.height) ? window.World.height : 5000;
 
-            // Iniciar el loop solo si no está ya corriendo
-            requestAnimationFrame(gameLoop);
+                if (window.SpatialGrid) {
+                    SpatialGrid.init(w, h, 200);
+                } else {
+                    console.error("SpatialGrid no encontrado!");
+                }
+
+                if (window.HUD) HUD.init();
+                if (window.Food) Food.generate();
+                if (window.Bots) Bots.generate(50);
+                if (window.Virus) Virus.generate(15);
+                if (window.Player) Player.startGame();
+
+                this.updateControlUI();
+
+                // Iniciar el loop solo si no está ya corriendo
+                requestAnimationFrame(gameLoop);
+            }
+
+            const ui = document.getElementById('gameplayUI');
+            if (ui) {
+                ui.style.display = 'block';
+                ui.style.opacity = '1';
+                ui.style.pointerEvents = 'none';
+            }
+
+            if (window.canvas) {
+                window.canvas.style.display = 'block';
+                window.canvas.style.zIndex = '1';
+                window.canvas.style.pointerEvents = 'auto';
+                resizeCanvas();
+            }
+
+            // Asegurar que la cámara esté sobre el jugador inmediatamente
+            if (window.Player && typeof window.Player.getCenter === 'function') {
+                const center = Player.getCenter();
+                window.camera.x = center.x - window.innerWidth / 2;
+                window.camera.y = center.y - window.innerHeight / 2;
+            }
+        } catch (e) {
+            console.error("Error crítico en Engine.start:", e);
         }
-
-        const ui = document.getElementById('gameplayUI');
-        if (ui) {
-            ui.style.display = 'block';
-            ui.style.opacity = '1';
-            ui.style.pointerEvents = 'none';
-        }
-
-        if (window.canvas) {
-            window.canvas.style.display = 'block';
-            window.canvas.style.zIndex = '1';
-            window.canvas.style.pointerEvents = 'auto';
-            resizeCanvas();
-        }
-
-        // Asegurar que la cámara esté sobre el jugador inmediatamente
-        const center = Player.getCenter();
-        window.camera.x = center.x - window.innerWidth / 2;
-        window.camera.y = center.y - window.innerHeight / 2;
     },
 
     resetPlayArea() {
