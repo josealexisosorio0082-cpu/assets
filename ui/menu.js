@@ -298,31 +298,35 @@
             const skinString = window.AndroidBridge.getSkinImages();
             if (skinString) {
                 const files = skinString.split(',');
-                files.forEach(path => {
+                files.forEach(fullPath => {
+                    if (!fullPath) return;
+
                     let type = 'premium';
-                    const lowPath = path.toLowerCase();
+                    const lowPath = fullPath.toLowerCase();
+
                     if (lowPath.includes('gratis') || lowPath.includes('free')) type = 'free';
                     else if (lowPath.includes('nivel') || lowPath.includes('level')) type = 'tactical';
                     else if (lowPath.includes('exclusive')) type = 'exclusive';
                     else if (lowPath.includes('extras')) type = 'aesthetic';
 
-                    this.tryLoadSkin("", path, type);
+                    // fullPath ya incluye ui/images/...
+                    this.tryLoadSkin("", fullPath, type);
                 });
-                return; // Salir si el bridge funcionó
+                return;
             }
         }
 
         // --- FALLBACK: ESCANEO POR FUERZA BRUTA (Para Navegador PC) ---
         const folders = [
-            { path: 'extras del juego/', type: 'aesthetic' },
-            { path: 'skins gratis/', type: 'free' },
-            { path: 'skins por nivel/', type: 'tactical' },
-            { path: 'skins por slip coins 15-70/', type: 'premium' }
+            { path: 'ui/images/extras del juego/', type: 'aesthetic' },
+            { path: 'ui/images/skins gratis/', type: 'free' },
+            { path: 'ui/images/skins por nivel/', type: 'tactical' },
+            { path: 'ui/images/skins por slip coins 15-70/', type: 'premium' }
         ];
 
         folders.forEach(folder => {
             for (let i = 1; i <= 30; i++) {
-                const extensions = ['.png', '.jpg', '.webp'];
+                const extensions = ['.png', '.jpg', '.webp', '.jpeg'];
                 extensions.forEach(ext => {
                     this.tryLoadSkin(folder.path, `skin (${i})${ext}`, folder.type);
                     this.tryLoadSkin(folder.path, `skin-${i}${ext}`, folder.type);
@@ -332,40 +336,47 @@
                 });
             }
         });
-
-        const exclusives = ["Exclusive (1).png", "Exclusive (2).png", "Cyber Micky.png"];
-        exclusives.forEach(ex => this.tryLoadSkin('skins exclusivas/', ex, 'exclusive'));
     },
 
     tryLoadSkin(folder, file, type) {
-        const path = folder + file;
-        let url = `ui/images/${path}`;
+        let path = folder + file;
+        let url = path;
 
-        // En Android, los archivos de assets necesitan una ruta absoluta o relativa específica
-        // y codificación de caracteres especiales (espacios, paréntesis)
-        if (window.AndroidBridge) {
+        // Si no empieza con ui/, lo corregimos (fallback)
+        if (!url.startsWith('ui/') && !url.startsWith('file:///')) {
+            url = `ui/images/${path}`;
+            path = `ui/images/${path}`;
+        }
+
+        if (window.AndroidBridge && !url.startsWith('file:///')) {
             url = `file:///android_asset/${url}`;
         }
 
         const encodedUrl = encodeURI(url);
-
-        // Evitar duplicados
         if (this.skins[path]) return;
 
         const img = new Image();
+        img.crossOrigin = "anonymous";
         img.onload = () => {
-            console.log(`[Scanner] Detectado: ${path}`);
             this.processDetectedSkin(path, img, type);
         };
-        img.onerror = () => {
-            // Silencioso para no saturar consola en fuerza bruta
-        };
+        img.onerror = () => {};
         img.src = encodedUrl;
     },
 
     processDetectedSkin(id, img, type) {
-        const analysis = this.analyzeImageComplexity(img);
-        const config = this.calibrateEconomy(analysis, type);
+        let analysis = { brightness: 50, colorVariety: 10, detailDensity: 0.1 };
+
+        // MÓDULO DE SEGURIDAD: Evitar crash en WebView por Origin en getImageData
+        try {
+            if (!window.AndroidBridge && !img.src.startsWith('data:')) {
+                analysis = this.analyzeImageComplexity(img);
+            }
+        } catch (e) {
+            console.warn("Análisis de imagen saltado por seguridad (CORS/Origin)");
+        }
+
+        const config = this.calibrateEconomy(analysis, type, id);
 
         this.skins[id] = {
             id: id,
@@ -423,33 +434,32 @@
         };
     },
 
-    calibrateEconomy(analysis, type) {
+    calibrateEconomy(analysis, type, id = "") {
         let price = 0, level = 0, rarity = 'COMÚN', name = "NEON GRID";
         const complexity = (analysis.brightness * 0.3) + (analysis.colorVariety * 2) + (analysis.detailDensity * 50);
 
+        const lowId = id.toLowerCase();
+
         if (type === 'premium') {
-            if (complexity > 120) { // Elite Supremo
-                price = Math.floor(10001 + (Math.random() * 9999));
-                rarity = 'LEGENDARIA';
-                const names = ["GOD PROTOCOL Ω", "NEXUS OVERLORD INFINITY", "VOID REAPER ULTRA", "ETERNITY CORE", "NEO GENESIS"];
-                name = names[Math.floor(Math.random() * names.length)];
-            } else { // Estándar/Avanzado
-                price = Math.floor(500 + (Math.random() * 9500));
-                rarity = complexity > 80 ? 'ÉPICA' : 'COMÚN';
-                const names = ["CYBER PULSE", "NIGHT STALKER", "PLASMA EDGE", "DATA GHOST"];
-                name = names[Math.floor(Math.random() * names.length)];
-            }
+            price = 500 + Math.floor(Math.random() * 9000);
+            rarity = complexity > 80 ? 'ÉPICA' : 'RARE';
+            name = "PREMIUM UNIT";
         } else if (type === 'tactical') {
-            level = Math.floor(5 + (Math.min(1, complexity / 150) * 45));
-            rarity = level > 30 ? 'ÉPICA' : 'COMÚN';
-            const names = ["CYBER HUNTER L-42", "APEX GLITCH", "TACTICAL VORTEX", "STRIKER X"];
-            name = names[Math.floor(Math.random() * names.length)];
+            level = 2 + Math.floor(Math.random() * 48);
+            rarity = level > 25 ? 'ÉPICA' : 'COMÚN';
+            name = "LVL PROTOCOL";
         } else {
-            // Free or Aesthetic
             price = 0;
-            rarity = complexity > 100 ? 'RARE' : 'COMÚN';
-            const names = ["Neon Grid", "Pulse Core", "Static Blue", "Vibe Wave"];
-            name = names[Math.floor(Math.random() * names.length)];
+            rarity = 'COMÚN';
+            name = "BASIC SKIN";
+        }
+
+        // Refinar nombre basado en el archivo si es posible
+        if (id.includes('/')) {
+            const fileName = id.split('/').pop().split('.')[0];
+            if (!fileName.includes('skin') && !fileName.includes('Free') && !fileName.includes('Premium')) {
+                name = fileName.replace(/[()]/g, '').trim();
+            }
         }
 
         return { price, level, rarity, name };
@@ -493,11 +503,21 @@
         const grid = document.getElementById('skinGrid'); if (!grid) return; grid.innerHTML = '';
         const userId = this.user ? this.user.id : 'guest';
         let purchased = JSON.parse(localStorage.getItem(`purchasedSkins_${userId}`) || "[]"), prog = JSON.parse(localStorage.getItem('slip_prog') || "{\"lvl\":1}");
+
         const filtered = Object.keys(this.skins).filter(k => {
-            const s = this.skins[k], low = k.toLowerCase();
-            if (this.currentSkinFilter === 'premium') return (low.includes('premium') || low.includes('coins')) && !s.exclusive;
-            if (this.currentSkinFilter === 'level') return (low.includes('nivel') || low.includes('level')) && !s.exclusive;
-            if (this.currentSkinFilter === 'free') return (low.includes('gratis') || low.includes('free')) && !s.exclusive;
+            const s = this.skins[k];
+            const lowKey = k.toLowerCase();
+
+            // FILTRO POR RUTA DE CARPETA (Más fiable que el nombre del archivo)
+            if (this.currentSkinFilter === 'premium') {
+                return lowKey.includes('slip coins') || (lowKey.includes('premium') && !s.exclusive);
+            }
+            if (this.currentSkinFilter === 'level') {
+                return lowKey.includes('por nivel') || (lowKey.includes('nivel') && !s.exclusive);
+            }
+            if (this.currentSkinFilter === 'free') {
+                return lowKey.includes('skins gratis') || (lowKey.includes('free') && !s.exclusive);
+            }
             if (this.currentSkinFilter === 'exclusive') return s.exclusive;
             return false;
         });
