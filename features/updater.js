@@ -31,10 +31,21 @@ const Updater = {
 
     checkUpdates: async function(isBackground = false) {
         if (this.isChecking) return;
+
+        // DETECCIÓN DE ENTORNO LOCAL (NAVEGADOR PC)
+        // El navegador bloquea peticiones de file:// a GitHub por CORS
+        if (!window.AndroidBridge && !location.protocol.startsWith('http')) {
+            console.log("[Updater] Entorno de navegador local detectado. Omitiendo verificación de GitHub (CORS).");
+            return;
+        }
+
         this.isChecking = true;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => {
+            console.warn("[Updater] Tiempo de espera agotado (Timeout).");
+            controller.abort();
+        }, 10000); // Aumentado a 10 segundos para mayor fiabilidad
 
         try {
             const localTimestamp = parseInt(localStorage.getItem("LAST_DEPLOY_TIMESTAMP") || "0");
@@ -42,17 +53,33 @@ const Updater = {
             // ELIMINACIÓN DE CACHÉ DE PETICIÓN (ANTI-STALLING)
             const antiCacheUrl = `${COMMITS_URL}&_nocache=${Date.now()}`;
 
+            console.log(`[Updater] Verificando: ${antiCacheUrl}`);
+
+            // Si no hay bridge, estamos en navegador y podría fallar por CORS
             const response = await fetch(antiCacheUrl, {
                 headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
                 signal: controller.signal
+            }).catch(err => {
+                if (!window.AndroidBridge) throw new Error("BLOQUEO DE NAVEGADOR (CORS)");
+                throw err;
             });
 
             clearTimeout(timeoutId);
 
-            if (!response.ok) throw new Error("GitHub API Offline");
+            if (!response.ok) {
+                if (response.status === 403) {
+                    const resetTime = response.headers.get('x-ratelimit-reset');
+                    const waitMin = resetTime ? Math.ceil((new Date(resetTime * 1000) - Date.now()) / 60000) : '60';
+                    throw new Error(`Límite de GitHub alcanzado. Reintenta en ${waitMin} min.`);
+                }
+                throw new Error(`Error de Servidor: ${response.status}`);
+            }
 
             const data = await response.json();
-            if (!data || data.length === 0) return;
+            if (!data || data.length === 0) {
+                console.warn("[Updater] No se recibieron datos del repositorio.");
+                return;
+            }
 
             const remoteDate = data[0].commit.committer.date;
             const commitMessage = data[0].commit.message;
@@ -69,7 +96,7 @@ const Updater = {
                 this.isUpdateFound = true;
 
                 // NOTIFICACIÓN NATIVA (SI ESTÁ EN SEGUNDO PLANO O APPBRIDGE DISPONIBLE)
-                if (window.AndroidBridge) {
+                if (window.AndroidBridge && window.AndroidBridge.sendLocalNotification) {
                     window.AndroidBridge.sendLocalNotification(
                         "⚠️ ACTUALIZACIÓN DISPONIBLE",
                         "Nueva versión crítica detectada. Toca para instalar mejoras ahora."
@@ -81,8 +108,25 @@ const Updater = {
                 console.log("[Updater] El sistema ya está en la última versión.");
             }
         } catch (error) {
-            console.warn("[Updater] Fallo en sincronización (Omitiendo verificación):", error.message);
-            // Si falla por conexión o timeout, permitimos el flujo normal local.
+            console.error("[Updater] Error detallado:", error.message);
+
+            let userMsg = "ERROR DE CONEXIÓN";
+            if (error.name === 'AbortError') {
+                userMsg = "TIEMPO AGOTADO (RED LENTA)";
+            } else if (error.message.includes("Límite")) {
+                userMsg = error.message.toUpperCase();
+            } else if (error.message.includes("Error de Servidor")) {
+                userMsg = "GITHUB OFFLINE O ERROR 500";
+            } else if (error.message === "Failed to fetch" || error.message.includes("network")) {
+                userMsg = "SIN ACCESO A INTERNET";
+            } else {
+                userMsg = `FALLO: ${error.message.toUpperCase()}`;
+            }
+
+            // Notificación visual específica
+            if (!isBackground) {
+                this.showStatusToast(userMsg);
+            }
         } finally {
             this.isChecking = false;
         }
