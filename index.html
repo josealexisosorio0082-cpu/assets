@@ -183,17 +183,17 @@
         <div class="input-group">
             <span class="input-label">Calidad Gráfica</span>
             <div class="action-grid" style="grid-template-columns: 1fr 1fr;">
-                <button class="g-btn" data-quality="low" style="padding: 10px; border-radius: 10px; border: 1.5px solid #8b5cf6; background: rgba(139, 92, 246, 0.1); color: #fff; font-weight: 900;">BAJA</button>
-                <button class="g-btn" data-quality="medium" style="padding: 10px; border-radius: 10px; border: 1.5px solid #8b5cf6; background: rgba(139, 92, 246, 0.1); color: #fff; font-weight: 900;">MEDIA</button>
-                <button class="g-btn" data-quality="high" style="padding: 10px; border-radius: 10px; border: 1.5px solid #8b5cf6; background: rgba(139, 92, 246, 0.1); color: #fff; font-weight: 900;">ALTA</button>
-                <button class="g-btn" data-quality="very_high" style="padding: 10px; border-radius: 10px; border: 1.5px solid #8b5cf6; background: rgba(139, 92, 246, 0.1); color: #fff; font-weight: 900;">ULTRA</button>
+                <button class="g-btn" data-quality="low">BAJA</button>
+                <button class="g-btn" data-quality="medium">MEDIA</button>
+                <button class="g-btn" data-quality="high">ALTA</button>
+                <button class="g-btn" data-quality="very_high">ULTRA</button>
             </div>
         </div>
         <div class="input-group">
             <span class="input-label">Controles</span>
             <div class="action-grid" style="grid-template-columns: 1fr 1fr;">
-                <button class="c-btn" data-control="touch" style="padding: 10px; border-radius: 10px; border: 1.5px solid #3b82f6; background: rgba(59, 130, 246, 0.1); color: #fff; font-weight: 900;">TOUCH</button>
-                <button class="c-btn" data-control="pc" style="padding: 10px; border-radius: 10px; border: 1.5px solid #3b82f6; background: rgba(59, 130, 246, 0.1); color: #fff; font-weight: 900;">MOUSE</button>
+                <button class="c-btn" data-control="touch">TOUCH</button>
+                <button class="c-btn" data-control="pc">MOUSE</button>
             </div>
         </div>
     </div>
@@ -241,20 +241,28 @@
 
 <!-- Modal Slip Pass -->
 <div id="slipPassModal" class="ui-screen">
-    <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-content" style="max-width: 580px; width: 95%; padding: 30px 20px 25px;">
         <div id="closePass" class="back-btn-circle">✖</div>
-        <h2 class="modal-title">Slip Pass</h2>
-        <div class="pass-header" style="width: 100%; background: rgba(139, 92, 246, 0.1); padding: 15px; border-radius: 15px; border: 1.5px solid #8b5cf6; margin-bottom: 20px; text-align: left;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <div style="font-weight: 950; color: #fff;">NIVEL <span id="passLvlText">1</span></div>
-                <div id="passXPText" style="font-weight: 900; font-size: 0.7rem; color: #8b5cf6;">0 / 1000 XP</div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 20px; padding: 0 10px;">
+            <h2 class="modal-title" style="margin-bottom: 0; font-size: 1.6rem;">Slip Pass</h2>
+            <div style="background: linear-gradient(135deg, #8b5cf6, #ec4899); padding: 6px 15px; border-radius: 12px; font-weight: 950; color: #fff; box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.6rem; opacity: 0.8;">NIVEL</span>
+                <span id="passLvlText" style="font-size: 1.2rem;">1</span>
             </div>
-            <div style="width: 100%; height: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; overflow: hidden; margin-bottom: 5px;">
-                <div id="passXPFill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #ec4899, #8b5cf6);"></div>
-            </div>
-            <div id="passPercentText" style="font-size: 10px; font-weight: 900; color: #94a3b8; text-align: right;">0% COMPLETADO</div>
         </div>
-        <div id="passRewardsList" style="width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-height: 400px; overflow-y: auto; padding: 5px;"></div>
+
+        <div class="pass-header-compact" style="width: 100%; background: rgba(15, 15, 25, 0.5); padding: 15px; border-radius: 20px; border: 1.5px solid rgba(139, 92, 246, 0.3); margin-bottom: 25px; backdrop-filter: blur(10px);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+                <div id="passXPText" style="font-weight: 900; font-size: 0.8rem; color: #fff; letter-spacing: 0.5px;">0 / 1000 XP</div>
+                <div id="passPercentText" style="font-size: 0.75rem; font-weight: 950; color: #8b5cf6;">0% COMPLETADO</div>
+            </div>
+            <div style="width: 100%; height: 10px; background: rgba(0,0,0,0.4); border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                <div id="passXPFill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #ec4899, #8b5cf6); box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);"></div>
+            </div>
+        </div>
+
+        <div id="passRewardsList" style="width: 100%; display: flex; gap: 15px; overflow-x: auto; padding: 10px 5px 20px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;"></div>
     </div>
 </div>
 

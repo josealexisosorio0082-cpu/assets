@@ -496,11 +496,12 @@
         let buySection = '';
         if (!p.passPurchased) {
             buySection = `
-                <div style="grid-column: 1/-1; background: linear-gradient(135deg, #8b5cf6, #ec4899); padding: 20px; border-radius: 20px; margin-bottom: 20px; text-align: center; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);">
-                    <div style="font-weight: 950; color: #fff; font-size: 1.2rem; margin-bottom: 5px;">SLIP PASS ELITE</div>
-                    <div style="font-size: 0.75rem; color: #fff; opacity: 0.9; margin-bottom: 15px;">¡Desbloquea todas las recompensas premium y skins exclusivas!</div>
-                    <button onclick="Menu.buySlipPass()" class="item-price-btn" style="background: #fff; color: #8b5cf6; width: auto; padding: 12px 30px; margin: 0 auto; display: block; font-size: 0.9rem;">
-                        💰 4,500 SLIP COINS
+                <div style="min-width: 240px; flex-shrink: 0; background: linear-gradient(135deg, #8b5cf6, #ec4899); padding: 25px 20px; border-radius: 22px; text-align: center; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3); display: flex; flex-direction: column; justify-content: center; border: 2px solid rgba(255,255,255,0.1); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -20px; left: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                    <div style="font-weight: 950; color: #fff; font-size: 1.3rem; margin-bottom: 5px; text-shadow: 0 2px 10px rgba(0,0,0,0.2);">ELITE PASS</div>
+                    <div style="font-size: 0.65rem; color: #fff; opacity: 0.9; margin-bottom: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Protocolo Premium Activo</div>
+                    <button onclick="Menu.buySlipPass()" class="item-price-btn" style="background: #fff; color: #8b5cf6; width: 100%; padding: 12px; font-size: 0.8rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                        💰 4,500 COINS
                     </button>
                 </div>
             `;
@@ -528,15 +529,15 @@
 
             let btnTxt = locked ? "BLOQUEADO" : (premiumLocked ? "ELITE REQ" : (claimed ? "RECLAMADO" : "RECLAMAR"));
             let btnClass = (locked || claimed || premiumLocked) ? "disabled" : "";
-            let premiumStyle = isPremium ? 'border: 1.5px solid #facc15; background: rgba(250, 204, 21, 0.05);' : '';
+            let premiumStyle = isPremium ? 'border: 1.5px solid #facc15; background: rgba(250, 204, 21, 0.08); box-shadow: inset 0 0 15px rgba(250, 204, 21, 0.1);' : '';
 
             return `
                 <div class="pass-reward-card ${locked ? 'locked' : ''} ${claimed ? 'claimed' : ''}" style="${premiumStyle}">
-                    ${isPremium ? '<div style="position:absolute; top:5px; right:5px; font-size:10px; color:#facc15; font-weight:950;">ELITE</div>' : ''}
+                    ${isPremium ? '<div style="position:absolute; top:8px; right:8px; font-size:9px; color:#facc15; font-weight:950; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 6px; border: 1px solid #facc15;">ELITE</div>' : ''}
                     <div class="pass-reward-lvl">NIVEL ${r.lvl}</div>
-                    <div class="pass-reward-icon">${r.icon}</div>
+                    <div class="pass-reward-icon" style="filter: drop-shadow(0 0 10px ${isPremium ? '#facc1544' : '#8b5cf644'});">${r.icon}</div>
                     <div class="pass-reward-name">${r.name}</div>
-                    <button class="pass-claim-btn ${btnClass}" onclick="Menu.claimPassReward(${r.lvl})">${btnTxt}</button>
+                    <button class="pass-claim-btn ${btnClass}" style="${isPremium && !locked && !claimed && !premiumLocked ? 'background: #facc15; color: #000;' : ''}" onclick="Menu.claimPassReward(${r.lvl})">${btnTxt}</button>
                 </div>
             `;
         }).join('');
