@@ -23,18 +23,25 @@ const Player = {
         this.level = data.lvl;
         this.gameState = "PLAYING"; this.isDead = false;
 
-        // Cargar Masa Extra de la Tienda
+        // Cargar Masa Extra de la Tienda y Laboratorio
         const permMass = parseInt(localStorage.getItem('slip_bonus_mass') || 0);
         const tempMass = parseInt(localStorage.getItem('slip_temp_mass') || 0);
+
+        // Bonus de Evolución (NUEVO)
+        const evoData = window.EvolutionLab ? window.EvolutionLab.getUpgradeData() : { mass: 0, speed: 0, resistance: 0 };
+        const evoMassBonus = evoData.mass * 5;
+
         localStorage.setItem('slip_temp_mass', 0); // Consumir para esta partida
-        const startMass = 30 + permMass + tempMass;
+        const startMass = 30 + permMass + tempMass + evoMassBonus;
         const startRadius = 30 * Math.sqrt(startMass / 30);
 
         // Cargar Velocidad Extra
         const permSpeed = parseFloat(localStorage.getItem('slip_bonus_speed') || 0);
         const tempSpeed = parseFloat(localStorage.getItem('slip_temp_speed') || 0);
+        const evoSpeedBonus = evoData.speed * 0.01;
+
         localStorage.setItem('slip_temp_speed', 0); // Consumir
-        this.bonusSpeed = permSpeed + tempSpeed;
+        this.bonusSpeed = permSpeed + tempSpeed + evoSpeedBonus;
 
         this.cells = [{
             x: 2500, y: 2500, mass: startMass, radius: startRadius, visualRadius: startRadius, targetRadius: startRadius,
@@ -60,17 +67,25 @@ const Player = {
     updateSprings(cell, dt = 16.6) {
         const pts = cell.points;
         if (!pts || pts.length === 0) return;
-        const dtFactor = dt / 16.6;
-        const k = 0.12, damp = Math.pow(0.88, dtFactor);
-        // Reducimos el factor de inercia (0.25 -> 0.1) para que la skin no se "despegue" tanto del centro
-        const inertia = 0.1;
+
+        // FISICA ESTABLE: Usamos un dt fijo para los resortes para evitar vibraciones
+        const fixedDt = 16.6;
+        const dtFactor = Math.min(2, dt / fixedDt);
+
+        const k = 0.08, damp = 0.85;
+        const inertia = 0.05; // Inercia reducida para mayor estabilidad visual
+
         for(let i=0; i<pts.length; i++) {
             const p = pts[i], angle = (i/pts.length) * Math.PI * 2;
             const tx = Math.cos(angle) * cell.visualRadius, ty = Math.sin(angle) * cell.visualRadius;
+
+            // Integración semi-implícita para mayor estabilidad
             p.vx += ((tx - p.x) * k - cell.vx * inertia) * dtFactor;
             p.vy += ((ty - p.y) * k - cell.vy * inertia) * dtFactor;
-            p.vx *= damp; p.vy *= damp;
-            p.x += p.vx * dtFactor; p.y += p.vy * dtFactor;
+            p.vx *= Math.pow(damp, dtFactor);
+            p.vy *= Math.pow(damp, dtFactor);
+            p.x += p.vx * dtFactor;
+            p.y += p.vy * dtFactor;
         }
     },
 
@@ -151,7 +166,7 @@ const Player = {
 
             const speedLimit = (18 / Math.sqrt(cell.mass)) + 0.35 + this.bonusSpeed;
 
-            const accel = (0.22 + (this.bonusSpeed * 0.5)) * dtFactor;
+            const accel = (0.28 + (this.bonusSpeed * 0.5)) * dtFactor;
             cell.vx += (dx / dist) * accel;
             cell.vy += (dy / dist) * accel;
             cell.vx *= damping; cell.vy *= damping;

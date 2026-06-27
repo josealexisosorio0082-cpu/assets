@@ -407,7 +407,16 @@ var Engine = {
         if (m && !m.done) {
             if (type === 'survive') m.progress = Math.floor((Date.now() - this.startTime) / 1000);
             else m.progress += value;
-            if (m.progress >= m.goal) { m.done = true; this.addCoins(m.reward); }
+            if (m.progress >= m.goal) {
+                m.done = true;
+
+                // MÓDULO ECONÓMICO: Bonus de Banquero Overlord
+                const evoData = window.EvolutionLab ? window.EvolutionLab.getUpgradeData() : { banker: 0 };
+                const bonusMultiplier = 1 + (evoData.banker * 0.1);
+                const finalReward = Math.floor(m.reward * bonusMultiplier);
+
+                this.addCoins(finalReward);
+            }
             this.renderMissions();
         }
     },
@@ -540,9 +549,9 @@ var Engine = {
 
         if (joystick.stick) joystick.stick.style.transform = `translate(${joystick.currentX}px, ${joystick.currentY}px)`;
 
-        const lerpSpeed = 1 - Math.pow(1 - 0.12, dtFactor);
-        window.mouse.x += (window.mouse.targetX - window.mouse.x) * lerpSpeed;
-        window.mouse.y += (window.mouse.targetY - window.mouse.y) * lerpSpeed;
+        // OPTIMIZACIÓN DE INPUT: Respuesta instantánea sin lag de doble lerp
+        window.mouse.x = window.mouse.targetX;
+        window.mouse.y = window.mouse.targetY;
 
         if (!Player.isPlaying()) return;
         if (Player.isDead) {
@@ -567,9 +576,24 @@ var Engine = {
 
                 const dx = cell.x - f.x, dy = cell.y - f.y;
                 const distSq = dx * dx + dy * dy;
-                if (distSq < cell.radius * cell.radius) {
-                    cell.mass += (f.ejected ? 3 : 1);
-                    cell.targetRadius = 30 * Math.sqrt(cell.mass / 30);
+
+                // MÓDULO ECONÓMICO: Magneto de Slip Coins
+                let attractionRadius = cell.radius;
+                if (f.isCoin && window.EvolutionLab) {
+                    const evoData = window.EvolutionLab.getUpgradeData();
+                    attractionRadius *= (1 + (evoData.magneto * 0.1));
+                }
+
+                if (distSq < attractionRadius * attractionRadius) {
+                    if (f.isCoin) {
+                        this.addCoins(1);
+                        if (window.VisualEffects && window.VisualEffects.createShockwave) {
+                            window.VisualEffects.createShockwave(f.x, f.y);
+                        }
+                    } else {
+                        cell.mass += (f.ejected ? 3 : 1);
+                        cell.targetRadius = 30 * Math.sqrt(cell.mass / 30);
+                    }
 
                     if (!isLow && window.VisualEffects) {
                         window.VisualEffects.spawnEatParticles(f.x, f.y, f.color);

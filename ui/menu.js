@@ -17,6 +17,10 @@
             { id: 'speed_1', name: 'Turbo', price: 250, type: 'coins', icon: '⚡', desc: '2% más de velocidad (Solo esta partida)', reward: { type: 'bonus_speed', value: 0.02, temporary: true } },
             { id: 'speed_2', name: 'Súper Turbo', price: 600, type: 'coins', icon: '⚡', desc: '5% más de velocidad (Solo esta partida)', reward: { type: 'bonus_speed', value: 0.05, temporary: true } }
         ],
+        mystery: [
+            { id: 'box_basic', name: 'Caja Galáctica', price: 1000, type: 'coins', icon: '📦', desc: 'Contiene una skin aleatoria de cualquier categoría.', reward: { type: 'mystery_box', value: 'basic' } },
+            { id: 'box_premium', name: 'Cofre de Plasma', price: 25, type: 'dna', icon: '💎', desc: 'Garantiza una skin Épica o Legendaria.', reward: { type: 'mystery_box', value: 'premium' } }
+        ],
         emotes: [
             { id: 'emote_smile', name: 'Sonrisa', price: 0, type: 'coins', icon: '😊', desc: '¡Emote gratis para todos!', reward: { type: 'unlock_emote', value: '😊' } },
             { id: 'emote_laugh', name: 'Risa', price: 500, type: 'coins', icon: '😂', desc: 'Para cuando ganes', reward: { type: 'unlock_emote', value: '😂' } },
@@ -131,6 +135,16 @@
 
         bind('slipPassBtn', () => this.switchState('ESTADO_PASS'));
         bind('closePass', () => this.switchState(this.STATES.MENU));
+
+        // Botón Social (NUEVO)
+        const socialBtn = document.createElement('div');
+        socialBtn.className = 'icon-btn';
+        socialBtn.id = 'socialBtn';
+        socialBtn.innerHTML = '<div class="p-icon" id="icon_social"></div><small>SOCIAL</small>';
+        const menuTopLeft = document.querySelector('.menu-top-left');
+        if (menuTopLeft) menuTopLeft.appendChild(socialBtn);
+
+        bind('socialBtn', () => this.openSocialModal());
 
         // Ajustes de Calidad y Control
         document.querySelectorAll('.g-btn').forEach(btn => {
@@ -309,7 +323,6 @@
                     else if (lowPath.includes('exclusive')) type = 'exclusive';
                     else if (lowPath.includes('extras')) type = 'aesthetic';
 
-                    // fullPath ya incluye ui/images/...
                     this.tryLoadSkin("", fullPath, type);
                 });
                 return;
@@ -321,7 +334,8 @@
             { path: 'ui/images/extras del juego/', type: 'aesthetic' },
             { path: 'ui/images/skins gratis/', type: 'free' },
             { path: 'ui/images/skins por nivel/', type: 'tactical' },
-            { path: 'ui/images/skins por slip coins 15-70/', type: 'premium' }
+            { path: 'ui/images/skins por slip coins 15-70/', type: 'premium' },
+            { path: 'ui/images/skins exclusivas/', type: 'exclusive' }
         ];
 
         folders.forEach(folder => {
@@ -333,32 +347,36 @@
                     if (folder.type === 'free') this.tryLoadSkin(folder.path, `Free (${i})${ext}`, folder.type);
                     if (folder.type === 'tactical') this.tryLoadSkin(folder.path, `Por Nivel (${i})${ext}`, folder.type);
                     if (folder.type === 'premium') this.tryLoadSkin(folder.path, `Premium (${i})${ext}`, folder.type);
+                    if (folder.type === 'exclusive') this.tryLoadSkin(folder.path, `Exclusive (${i})${ext}`, folder.type);
                 });
             }
         });
     },
 
     tryLoadSkin(folder, file, type) {
-        let path = folder + file;
-        let url = path;
+        let rawPath = folder + file;
 
-        // Si no empieza con ui/, lo corregimos (fallback)
-        if (!url.startsWith('ui/') && !url.startsWith('file:///')) {
-            url = `ui/images/${path}`;
-            path = `ui/images/${path}`;
+        // NORMALIZACIÓN DE IDENTIFICADOR (Key Única)
+        let cleanKey = rawPath.replace('file:///android_asset/', '');
+        if (!cleanKey.startsWith('ui/')) {
+            if (cleanKey.startsWith('images/')) cleanKey = 'ui/' + cleanKey;
+            else cleanKey = 'ui/images/' + cleanKey;
         }
 
-        if (window.AndroidBridge && !url.startsWith('file:///')) {
-            url = `file:///android_asset/${url}`;
+        // CONSTRUCCIÓN DE URL DE CARGA
+        let loadUrl = cleanKey;
+        if (window.AndroidBridge) {
+            loadUrl = `file:///android_asset/${cleanKey}`;
         }
 
-        const encodedUrl = encodeURI(url);
-        if (this.skins[path]) return;
+        const encodedUrl = encodeURI(loadUrl);
+        if (this.skins[cleanKey]) return;
 
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-            this.processDetectedSkin(path, img, type);
+            console.log(`[Scanner] Skin Registrada: ${cleanKey}`);
+            this.processDetectedSkin(cleanKey, img, type);
         };
         img.onerror = () => {};
         img.src = encodedUrl;
@@ -508,7 +526,7 @@
             const s = this.skins[k];
             const lowKey = k.toLowerCase();
 
-            // FILTRO POR RUTA DE CARPETA (Más fiable que el nombre del archivo)
+            // FILTRO BASADO EN LA RUTA NORMALIZADA (Identifica la carpeta de origen)
             if (this.currentSkinFilter === 'premium') {
                 return lowKey.includes('slip coins') || (lowKey.includes('premium') && !s.exclusive);
             }
@@ -518,7 +536,9 @@
             if (this.currentSkinFilter === 'free') {
                 return lowKey.includes('skins gratis') || (lowKey.includes('free') && !s.exclusive);
             }
-            if (this.currentSkinFilter === 'exclusive') return s.exclusive;
+            if (this.currentSkinFilter === 'exclusive') {
+                return s.exclusive || lowKey.includes('exclusiva');
+            }
             return false;
         });
         filtered.forEach(key => {
@@ -884,6 +904,8 @@
                         localStorage.setItem('slip_unlocked_effects', JSON.stringify(effects));
                     } else if (r.type === 'unlock_emote') {
                         this.unlockEmote(r.value);
+                    } else if (r.type === 'mystery_box') {
+                        this.openMysteryBox(r.value);
                     }
                 }
 
@@ -943,6 +965,16 @@
             if(v) v.classList.add('active');
             title.innerText = cat==='mass'?'Maza':(cat==='speed'?'Velocidad':(cat==='emotes'?'Emotes':'Pociones'));
             this.renderShopItems(cat);
+        } else if (cat === 'evolution') {
+            const v = document.getElementById('shopItemsView');
+            if(v) v.classList.add('active');
+            title.innerText = "EVOLUCIÓN";
+            if (window.EvolutionLab) window.EvolutionLab.renderLab();
+        } else if (cat === 'mystery') {
+            const v = document.getElementById('shopItemsView');
+            if(v) v.classList.add('active');
+            title.innerText = "CAJAS MISTERIOSAS";
+            this.renderShopItems('mystery');
         }
     },
 
@@ -1151,6 +1183,120 @@
         document.getElementById('lvlDisplay').innerText = `⭐ Nivel ${stats.lvl}`;
         document.getElementById('xpGainedText').innerText = `+${stats.gained} XP`;
         document.getElementById('xpBarFill').style.width = `${(stats.xp / stats.threshold) * 100}%`;
+    },
+
+    openSocialModal() {
+        const referralCode = this.user.id.substring(0, 6).toUpperCase();
+        this.showAlert(
+            "SISTEMA SOCIAL",
+            `Comparte tu código con amigos para ganar ADN y Skins Exclusivas.\n\nTU CÓDIGO: ${referralCode}`,
+            "🤝",
+            () => {
+                if (window.AndroidBridge) window.AndroidBridge.shareGame(referralCode);
+            },
+            () => {
+                const code = prompt("Introduce el código de un amigo:");
+                if (code && code.length >= 5) {
+                    this.addReferralReward(code);
+                }
+            },
+            "INVITAR AMIGOS",
+            "PONER CÓDIGO"
+        );
+    },
+
+    addReferralReward(code) {
+        const userId = this.user.id;
+        if (localStorage.getItem(`referral_used_${userId}`)) {
+            this.showAlert("SISTEMA", "Ya has usado un código de referido.", "⚠️");
+            return;
+        }
+        localStorage.setItem(`referral_used_${userId}`, code);
+        window.Engine.addDna(15);
+        this.showAlert("¡ÉXITO!", "Has recibido 15 ADN. ¡Invita a más amigos!", "✨");
+    },
+
+    openMysteryBox(boxType) {
+        const modal = document.getElementById('dailyChest');
+        if (!modal) return;
+
+        this.switchState('ESTADO_REGALO');
+        const box = document.getElementById('chestBox');
+        const iconEl = document.getElementById('rewardIcon');
+        const textEl = document.getElementById('rewardText');
+        const titleEl = document.getElementById('chestTitle');
+        const instrEl = document.getElementById('chestInstruction');
+
+        titleEl.innerText = boxType === 'premium' ? "COFRE DE PLASMA" : "CAJA GALÁCTICA";
+        box.style.display = 'block';
+        box.style.transform = 'scale(1)';
+        box.innerText = boxType === 'premium' ? '💎' : '📦';
+        document.getElementById('rewardClaimedArea').style.display = 'none';
+        instrEl.innerText = "TOCA PARA ABRIR";
+
+        box.onclick = () => {
+            box.style.transform = 'scale(0)';
+
+            // CONGELACIÓN SUTIL DE UI PARA MAXIMIZAR EXPECTATIVA
+            const overlay = document.querySelector('.modal-content');
+            if(overlay) overlay.style.filter = "brightness(1.5) blur(1px)";
+
+            setTimeout(() => {
+                if(overlay) overlay.style.filter = "none";
+                box.style.display = 'none';
+                document.getElementById('rewardClaimedArea').style.display = 'block';
+
+                // LÓGICA DE GACHA BALANCEADA
+                const userId = this.user ? this.user.id : 'guest';
+                const purchased = JSON.parse(localStorage.getItem(`purchasedSkins_${userId}`) || "[]");
+
+                // Filtrar pool (Solo Premium 15-70 que NO tengamos)
+                let pool = Object.values(this.skins).filter(s =>
+                    s.id.toLowerCase().includes('slip coins') && !purchased.includes(s.id)
+                );
+
+                // Fallback si ya tenemos todo el pool premium
+                if (pool.length === 0) {
+                    pool = Object.values(this.skins).filter(s => !purchased.includes(s.id));
+                }
+
+                // Si el jugador ya tiene TODO, damos ADN de consolación
+                if (pool.length === 0) {
+                    iconEl.innerHTML = "🧬";
+                    textEl.innerText = "+20 ADN (Colección Completa)";
+                    window.Engine.addDna(20);
+                    return;
+                }
+
+                // Weighted Random (60% Común, 30% Épica, 10% Legendaria)
+                const rand = Math.random() * 100;
+                let rarityTarget = 'COMÚN';
+                if (boxType === 'premium') {
+                    rarityTarget = rand < 70 ? 'ÉPICA' : 'LEGENDARIA';
+                } else {
+                    if (rand > 90) rarityTarget = 'LEGENDARIA';
+                    else if (rand > 60) rarityTarget = 'ÉPICA';
+                }
+
+                let candidates = pool.filter(s => s.rarity === rarityTarget);
+                if (candidates.length === 0) candidates = pool; // Fallback si no hay de esa rareza disponible
+
+                const rewardSkin = candidates[Math.floor(Math.random() * candidates.length)];
+
+                iconEl.innerHTML = `<img src="${rewardSkin.url}" style="width:120px; height:120px; border-radius:50%; border:5px solid #facc15; box-shadow: 0 0 30px #facc1566;">`;
+                textEl.innerText = rewardSkin.name;
+                titleEl.innerText = "¡SISTEMA ACTUALIZADO!";
+                instrEl.innerText = "NUEVA UNIDAD ADQUIRIDA";
+
+                // Guardar skin
+                purchased.push(rewardSkin.id);
+                localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(purchased));
+
+                if (window.VisualEffects && window.VisualEffects.createShockwave) {
+                    window.VisualEffects.createShockwave(window.innerWidth/2, window.innerHeight/2);
+                }
+            }, 1200); // 1.2s de suspense
+        };
     }
 };
 

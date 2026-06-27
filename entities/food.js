@@ -27,7 +27,12 @@ const Food = {
         const f = this.getFood();
         f.x = finalX; f.y = finalY; f.radius = 5;
         f.animRadius = 5;
-        f.color = this.colors[Math.floor(Math.random() * this.colors.length)];
+
+        // MÓDULO ECONÓMICO: Rare Spawn de Slip Coins
+        const coinChance = 0.05; // 5% de que la comida sea una moneda
+        f.isCoin = Math.random() < coinChance;
+        f.color = f.isCoin ? "#facc15" : this.colors[Math.floor(Math.random() * this.colors.length)];
+
         f.ejected = false;
         f.vx = 0; f.vy = 0;
         f.isDying = false;
@@ -104,6 +109,13 @@ const Food = {
 
             if (f.ejected) {
                 ejectedItems.push(f);
+                continue;
+            }
+
+            if (f.isCoin) {
+                // Dibujar monedas individualmente o en batch dorado
+                if (!batches["#facc15"]) batches["#facc15"] = [];
+                batches["#facc15"].push(f);
                 continue;
             }
 

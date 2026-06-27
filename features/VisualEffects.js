@@ -87,7 +87,8 @@
     spawnSplat(x, y, color) {
         const q = localStorage.getItem('game_quality') || 'high';
         if (q === 'low' || this.particles.length >= this.maxParticles) return;
-        const count = q === 'medium' ? 3 : 5;
+        // Limitamos partículas en móviles para evitar caídas de FPS
+        const count = q === 'very_high' ? 6 : (q === 'medium' ? 2 : 4);
         for(let i=0; i<count; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 1 + Math.random() * 3;
@@ -183,15 +184,18 @@
     renderAura(ctx, x, y, r, type) {
         ctx.save();
         const time = Date.now() * 0.002;
+        const q = localStorage.getItem('game_quality') || 'high';
+
         if (type === 'fire') {
-            const grad = ctx.createRadialGradient(x, y, r, x, y, r * 1.6);
+            const segments = q === 'very_high' ? 16 : 10;
+            const grad = ctx.createRadialGradient(x, y, r, x, y, r * 1.5);
             grad.addColorStop(0, 'rgba(255, 80, 0, 0.4)');
             grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
             ctx.fillStyle = grad;
             ctx.beginPath();
-            for(let i=0; i<16; i++) {
-                const angle = (i/16) * Math.PI * 2 + time;
-                const dist = r * (1.3 + Math.sin(time * 3 + i) * 0.25);
+            for(let i=0; i<segments; i++) {
+                const angle = (i/segments) * Math.PI * 2 + time;
+                const dist = r * (1.2 + Math.sin(time * 3 + i) * 0.15);
                 const px = x + Math.cos(angle) * dist;
                 const py = y + Math.sin(angle) * dist;
                 if(i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
@@ -199,33 +203,34 @@
             ctx.closePath();
             ctx.fill();
         } else if (type === 'ice') {
-            ctx.strokeStyle = 'rgba(0, 200, 255, 0.5)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(x, y, r * 1.3, 0, Math.PI * 2);
-            ctx.stroke();
-            for(let i=0; i<6; i++) {
-                const angle = (i/6) * Math.PI * 2 + time * 0.5;
-                const px = x + Math.cos(angle) * r * 1.3;
-                const py = y + Math.sin(angle) * r * 1.3;
-                this.drawCrystal(ctx, px, py, r * 0.2, angle);
-            }
-        } else if (type === 'plasma') {
-            const grad = ctx.createRadialGradient(x, y, r, x, y, r * 1.8);
-            grad.addColorStop(0, 'rgba(168, 85, 247, 0.3)');
-            grad.addColorStop(0.5, 'rgba(139, 92, 246, 0.2)');
-            grad.addColorStop(1, 'rgba(139, 92, 246, 0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath(); ctx.arc(x, y, r * 1.8, 0, Math.PI * 2); ctx.fill();
-
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.strokeStyle = 'rgba(0, 200, 255, 0.4)';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            for(let i=0; i<3; i++) {
-                const rot = time + (i * Math.PI / 3);
-                ctx.ellipse(x, y, r * 1.5, r * 0.4, rot, 0, Math.PI * 2);
-            }
+            ctx.arc(x, y, r * 1.2, 0, Math.PI * 2);
             ctx.stroke();
+            const crystals = q === 'very_high' ? 6 : 4;
+            for(let i=0; i<crystals; i++) {
+                const angle = (i/crystals) * Math.PI * 2 + time * 0.5;
+                const px = x + Math.cos(angle) * r * 1.2;
+                const py = y + Math.sin(angle) * r * 1.2;
+                this.drawCrystal(ctx, px, py, r * 0.15, angle);
+            }
+        } else if (type === 'plasma') {
+            const grad = ctx.createRadialGradient(x, y, r, x, y, r * 1.6);
+            grad.addColorStop(0, 'rgba(168, 85, 247, 0.2)');
+            grad.addColorStop(1, 'rgba(139, 92, 246, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.arc(x, y, r * 1.6, 0, Math.PI * 2); ctx.fill();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1.5;
+            const rings = q === 'very_high' ? 3 : 2;
+            for(let i=0; i<rings; i++) {
+                const rot = time + (i * Math.PI / rings);
+                ctx.beginPath();
+                ctx.ellipse(x, y, r * 1.4, r * 0.3, rot, 0, Math.PI * 2);
+                ctx.stroke();
+            }
         }
         ctx.restore();
     },
