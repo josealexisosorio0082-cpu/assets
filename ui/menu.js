@@ -291,6 +291,28 @@
 
     loadDynamicSkins() {
         console.log("Slip Game: Iniciando FolderStorageScanner...");
+
+        // --- PRIORIDAD: BRIDGE NATIVO ANDROID ---
+        if (window.AndroidBridge && typeof window.AndroidBridge.getSkinImages === 'function') {
+            console.log("Slip Game: Usando bridge nativo para listar skins...");
+            const skinString = window.AndroidBridge.getSkinImages();
+            if (skinString) {
+                const files = skinString.split(',');
+                files.forEach(path => {
+                    let type = 'premium';
+                    const lowPath = path.toLowerCase();
+                    if (lowPath.includes('gratis') || lowPath.includes('free')) type = 'free';
+                    else if (lowPath.includes('nivel') || lowPath.includes('level')) type = 'tactical';
+                    else if (lowPath.includes('exclusive')) type = 'exclusive';
+                    else if (lowPath.includes('extras')) type = 'aesthetic';
+
+                    this.tryLoadSkin("", path, type);
+                });
+                return; // Salir si el bridge funcionó
+            }
+        }
+
+        // --- FALLBACK: ESCANEO POR FUERZA BRUTA (Para Navegador PC) ---
         const folders = [
             { path: 'extras del juego/', type: 'aesthetic' },
             { path: 'skins gratis/', type: 'free' },
@@ -298,24 +320,12 @@
             { path: 'skins por slip coins 15-70/', type: 'premium' }
         ];
 
-        let scanCount = 0;
-        const totalToScan = folders.length * 30;
-
         folders.forEach(folder => {
             for (let i = 1; i <= 30; i++) {
-                const extensions = ['.png', '.jpg'];
+                const extensions = ['.png', '.jpg', '.webp'];
                 extensions.forEach(ext => {
-                    const fileName = `skin (${i})${ext}`;
-                    // Caso especial para nombres que no siguen el patrón estricto si es necesario,
-                    // pero seguiremos el patrón solicitado: 'skin-' + i o similar.
-                    // El usuario mencionó: 'ui/images/skins por slip coins 15-70/skin-' + i + '.png'
-                    // Pero también hay archivos con espacios y paréntesis en el código viejo.
-                    // Ajustaré para probar ambos patrones comunes: "skin (i)" y "skin-i".
-
                     this.tryLoadSkin(folder.path, `skin (${i})${ext}`, folder.type);
                     this.tryLoadSkin(folder.path, `skin-${i}${ext}`, folder.type);
-
-                    // También incluiremos el formato del código anterior por si acaso
                     if (folder.type === 'free') this.tryLoadSkin(folder.path, `Free (${i})${ext}`, folder.type);
                     if (folder.type === 'tactical') this.tryLoadSkin(folder.path, `Por Nivel (${i})${ext}`, folder.type);
                     if (folder.type === 'premium') this.tryLoadSkin(folder.path, `Premium (${i})${ext}`, folder.type);
@@ -323,14 +333,21 @@
             }
         });
 
-        // Skins exclusivas manuales (se mantienen como fallback o especiales)
         const exclusives = ["Exclusive (1).png", "Exclusive (2).png", "Cyber Micky.png"];
         exclusives.forEach(ex => this.tryLoadSkin('skins exclusivas/', ex, 'exclusive'));
     },
 
     tryLoadSkin(folder, file, type) {
         const path = folder + file;
-        const url = `ui/images/${path}`;
+        let url = `ui/images/${path}`;
+
+        // En Android, los archivos de assets necesitan una ruta absoluta o relativa específica
+        // y codificación de caracteres especiales (espacios, paréntesis)
+        if (window.AndroidBridge) {
+            url = `file:///android_asset/${url}`;
+        }
+
+        const encodedUrl = encodeURI(url);
 
         // Evitar duplicados
         if (this.skins[path]) return;
@@ -341,9 +358,9 @@
             this.processDetectedSkin(path, img, type);
         };
         img.onerror = () => {
-            // Ignorar errores de carga (archivos inexistentes)
+            // Silencioso para no saturar consola en fuerza bruta
         };
-        img.src = url;
+        img.src = encodedUrl;
     },
 
     processDetectedSkin(id, img, type) {
