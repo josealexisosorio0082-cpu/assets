@@ -40,7 +40,8 @@ const Multiplayer = {
             id: this.myId,
             name: Player.name,
             skin: Player.skinKey,
-            cells: Player.cells.map(c => ({ x: c.x, y: c.y, r: c.radius }))
+            cells: Player.cells.map(c => ({ x: c.x, y: c.y, r: c.radius })),
+            emote: Player.activeEmote ? Player.activeEmote.text : null
         };
         window.AndroidBridge.sendLanMessage(JSON.stringify(data));
     },
@@ -81,7 +82,7 @@ const Multiplayer = {
             const p = this.remotePlayers[id];
             if (!p || !p.cells) continue;
 
-            p.cells.forEach(cell => {
+            p.cells.forEach((cell, idx) => {
                 if (!cell) return;
                 const sx = cell.x - camera.x, sy = cell.y - camera.y;
                 const r = cell.r || 30;
@@ -92,11 +93,18 @@ const Multiplayer = {
                 }
 
                 ctx.fillStyle = "#ffffff";
-                ctx.font = "bold 12px Arial";
+                ctx.font = "bold 12px Inter";
                 ctx.textAlign = "center";
                 ctx.strokeStyle = "#000000"; ctx.lineWidth = 1.5;
                 ctx.strokeText(p.name || "Jugador", sx, sy);
                 ctx.fillText(p.name || "Jugador", sx, sy);
+
+                // Renderizar emote del jugador remoto
+                if (idx === 0 && p.emote) {
+                    ctx.font = `${r * 0.8}px Inter`;
+                    const bounce = Math.sin(Date.now() * 0.01) * 5;
+                    ctx.fillText(p.emote, sx, sy - r - 30 + bounce);
+                }
                 ctx.restore();
             });
         }

@@ -1,5 +1,5 @@
 ﻿var Menu = {
-    STATES: { MENU: 'ESTADO_MENU', TIENDA: 'ESTADO_TIENDA', JUEGO: 'ESTADO_JUEGO', PAUSA: 'ESTADO_PAUSA', MUERTE: 'ESTADO_GAME_OVER' },
+    STATES: { MENU: 'ESTADO_MENU', TIENDA: 'ESTADO_TIENDA', JUEGO: 'ESTADO_JUEGO', PAUSA: 'ESTADO_PAUSA', MUERTE: 'ESTADO_GAME_OVER', PERFIL: 'ESTADO_PERFIL' },
     currentState: '',
     previousState: '',
     currentSkin: '',
@@ -9,20 +9,38 @@
     skinImages: {},
     shopItems: {
         mass: [
-            { id: 'mass_1', name: 'Masa +50', price: 50, type: 'coins', icon: '⚖️', desc: 'Inicia con 50 más de masa' },
-            { id: 'mass_2', name: 'Masa +150', price: 120, type: 'coins', icon: '⚖️', desc: 'Inicia con 150 más de masa' }
+            { id: 'mass_1', name: 'Masa +20', price: 150, type: 'coins', icon: '⚖️', desc: 'Inicia con 20 más de masa (Solo esta partida)', reward: { type: 'bonus_mass', value: 20, temporary: true } },
+            { id: 'mass_2', name: 'Masa +50', price: 400, type: 'coins', icon: '⚖️', desc: 'Inicia con 50 más de masa (Solo esta partida)', reward: { type: 'bonus_mass', value: 50, temporary: true } },
+            { id: 'mass_3', name: 'Masa +100', price: 1200, type: 'coins', icon: '⚖️', desc: 'Inicia con 100 más de masa (Solo esta partida)', reward: { type: 'bonus_mass', value: 100, temporary: true } }
         ],
         speed: [
-            { id: 'speed_1', name: 'Turbo', price: 80, type: 'coins', icon: '⚡', desc: '5% más de velocidad base' }
+            { id: 'speed_1', name: 'Turbo', price: 250, type: 'coins', icon: '⚡', desc: '2% más de velocidad (Solo esta partida)', reward: { type: 'bonus_speed', value: 0.02, temporary: true } },
+            { id: 'speed_2', name: 'Súper Turbo', price: 600, type: 'coins', icon: '⚡', desc: '5% más de velocidad (Solo esta partida)', reward: { type: 'bonus_speed', value: 0.05, temporary: true } }
+        ],
+        emotes: [
+            { id: 'emote_smile', name: 'Sonrisa', price: 0, type: 'coins', icon: '😊', desc: '¡Emote gratis para todos!', reward: { type: 'unlock_emote', value: '😊' } },
+            { id: 'emote_laugh', name: 'Risa', price: 500, type: 'coins', icon: '😂', desc: 'Para cuando ganes', reward: { type: 'unlock_emote', value: '😂' } },
+            { id: 'emote_cool', name: 'Genial', price: 800, type: 'coins', icon: '😎', desc: 'Estilo puro', reward: { type: 'unlock_emote', value: '😎' } },
+            { id: 'emote_angry', name: 'Enojo', price: 1200, type: 'coins', icon: '😡', desc: '¡No me comas!', reward: { type: 'unlock_emote', value: '😡' } }
         ],
         potions: [
-            { id: 'potion_1', name: 'Escudo', price: 3, type: 'dna', icon: '🧪', desc: 'Protección contra 1 virus' }
+            { id: 'potion_1', name: 'Escudo', price: 3, type: 'dna', icon: '🧪', desc: 'Protección contra 1 virus', reward: { type: 'shield', value: 1 } },
+            { id: 'potion_2', name: 'Mega Escudo', price: 10, type: 'dna', icon: '🧪', desc: 'Protección contra 5 virus', reward: { type: 'shield', value: 5 } }
         ],
         coins: [
-            { id: 'coins_pack_1', name: 'Mini Pack', price: 1, type: 'dna', icon: '💰', desc: 'Intercambia 1 ADN por 100 Monedas' }
+            { id: 'coins_usd_1', name: 'Bolsa de Créditos', price: 4.99, type: 'usd', icon: '💰', desc: '5,000 Slip Coins - ¡Ideal para empezar!', reward: { type: 'coins', value: 5000 }, tag: 'POPULAR' },
+            { id: 'coins_usd_2', name: 'Maletín Plasma', price: 9.99, type: 'usd', icon: '💼', desc: '12,000 Slip Coins - Mejor valor por tu dinero', reward: { type: 'coins', value: 12000 }, tag: 'OFERTA' },
+            { id: 'coins_usd_3', name: 'Bóveda Galáctica', price: 24.99, type: 'usd', icon: '🏦', desc: '35,000 Slip Coins - ¡Desbloquea casi todo!', reward: { type: 'coins', value: 35000 }, tag: 'RECOMENDADO' },
+            { id: 'coins_usd_4', name: 'Cargamento Infinito', price: 49.99, type: 'usd', icon: '🚢', desc: '80,000 Slip Coins - Sin límites, sin esperas', reward: { type: 'coins', value: 80000 }, tag: 'VIP' },
+            { id: 'coins_usd_5', name: 'Protocolo Fundador', price: 99.99, type: 'usd', icon: '👑', desc: '200,000 Slip Coins - Domina el servidor hoy', reward: { type: 'coins', value: 200000 }, tag: 'BEST VALUE' }
         ],
         dna: [
-            { id: 'dna_pack_1', name: 'ADN Pack', price: 500, type: 'coins', icon: '🧬', desc: 'Intercambia 500 Monedas por 2 ADN' }
+            { id: 'dna_usd_1', name: 'Jeringa Premium', price: 2.99, type: 'usd', icon: '🧪', desc: '10 ADN Premium', reward: { type: 'dna', value: 10 } },
+            { id: 'dna_usd_2', name: 'Caja de Cultivo', price: 14.99, type: 'usd', icon: '🧬', desc: '60 ADN Premium - ¡Ahorra un 20%!', reward: { type: 'dna', value: 60 }, tag: 'HOT' },
+            { id: 'dna_pack_1', name: 'Laboratorio Local', price: 2000, type: 'coins', icon: '🧬', desc: 'Intercambia 2000 Monedas por 2 ADN', reward: { type: 'dna', value: 2 } },
+            { id: 'dna_pack_2', name: 'Modo Fuego', price: 50, type: 'dna', icon: '🔥', desc: 'Efecto Visual Permanente', reward: { type: 'unlock_effect', value: 'fire' } },
+            { id: 'dna_pack_3', name: 'Modo Hielo', price: 50, type: 'dna', icon: '❄️', desc: 'Efecto Visual Permanente', reward: { type: 'unlock_effect', value: 'ice' } },
+            { id: 'dna_pack_4', name: 'Aura Plasma', price: 80, type: 'dna', icon: '⚛️', desc: 'Efecto Visual Permanente', reward: { type: 'unlock_effect', value: 'plasma' } }
         ]
     },
 
@@ -38,6 +56,14 @@
                 el.style.display = 'none';
             }
         });
+
+        // Asegurar que el usuario tenga el emote gratis inicial
+        const userId = this.user ? this.user.id : 'guest';
+        let emotes = JSON.parse(localStorage.getItem(`unlockedEmotes_${userId}`) || "[]");
+        if (emotes.length === 0) {
+            emotes.push("😊");
+            localStorage.setItem(`unlockedEmotes_${userId}`, JSON.stringify(emotes));
+        }
 
         // Eventos con addEventListener para evitar conflictos
         const bind = (id, fn) => {
@@ -62,7 +88,10 @@
         bind('exitToMenuBtn', () => location.reload());
 
         bind('editNameBtn', () => this.openProfile());
-        bind('closeProfile', () => this.switchState(this.STATES.MENU));
+        bind('closeProfile', () => {
+            console.log("Slip Game: Cerrando Perfil...");
+            this.switchState(this.STATES.MENU);
+        });
         bind('goToSkinsFromProfile', () => this.switchState(this.STATES.TIENDA));
 
         bind('settingsBtn', () => this.switchState('ESTADO_AJUSTES'));
@@ -145,6 +174,8 @@
             }
         });
 
+        bind('btnEmote', () => this.toggleEmotePicker());
+
         const updateName = (e) => {
             const val = e.target.value.trim();
             if (val && this.user) {
@@ -163,6 +194,19 @@
         if (pName) pName.onchange = updateName;
 
         this.checkAuthSession();
+
+        // Cerrar modales al tocar el fondo
+        document.querySelectorAll('.ui-screen').forEach(screen => {
+            screen.addEventListener('click', (e) => {
+                if (e.target === screen) {
+                    const id = screen.id;
+                    if (id !== 'menu' && id !== 'loadingOverlay' && id !== 'gameOverScreen') {
+                        this.switchState(this.STATES.MENU);
+                    }
+                }
+            });
+        });
+
         this.loadDynamicSkins();
         this.renderAllIcons();
         this.updateMenuUI();
@@ -177,10 +221,11 @@
             { id: 'icon_dna_hud', type: 'dna' }, { id: 'icon_coin_hud', type: 'coin' },
             { id: 'icon_dna_shop', type: 'dna' }, { id: 'icon_coin_shop', type: 'coin' },
             { id: 'icon_cat_skins', type: 'free' }, { id: 'icon_cat_mass', type: 'missions' },
-            { id: 'icon_cat_speed', type: 'lan' }, { id: 'icon_cat_potions', type: 'settings' },
+            { id: 'icon_cat_speed', type: 'lan' }, { id: 'icon_cat_emotes', type: 'emote' }, { id: 'icon_cat_potions', type: 'settings' },
             { id: 'icon_cat_coins', type: 'coin' }, { id: 'icon_cat_dna', type: 'dna' },
             { id: 'icon_split', type: 'split' }, { id: 'icon_eject', type: 'eject' },
-            { id: 'icon_pause', type: 'pause' }, { id: 'icon_lb_toggle', type: 'lb_toggle' }
+            { id: 'icon_pause', type: 'pause' }, { id: 'icon_lb_toggle', type: 'lb_toggle' },
+            { id: 'icon_emote', type: 'emote' }
         ];
 
         if (!window.VisualEffects) {
@@ -249,7 +294,19 @@
             let name = "Skin " + num, price = 0, lvl = 0, excl = false, req = "", rarity = 'COMÚN';
             if (isFree) { name = ["Nebulosa", "Atómica", "Plasma", "Vórtice", "Estelar"][num-1] || "Libre " + num; }
             else if (isLevel) { name = ["Explorador", "Guerrero", "Veterano", "Maestro", "Leyenda", "Supremo"][num-1] || "Rango " + num; lvl = parseInt(num); rarity = lvl > 4 ? 'LEGENDARIA' : 'ÉPICA'; }
-            else if (isPremium) { name = ["Galáctica", "Cibernética", "Fénix", "Ártico", "Sombra", "Oro", "Diamante", "Rubí", "Infinito", "Caos", "Nova", "Dragón", "Samurái", "Ninja", "Robot", "Alien", "Cósmico", "Titanio", "Obsidiana", "Relámpago", "Quásar", "Espectral", "Místico", "Supremo"][(num-1)%24] || "Premium " + num; if (num % 8 === 0) { rarity = 'LEGENDARIA'; price = 65; } else if (num % 3 === 0) { rarity = 'ÉPICA'; price = 40; } else { rarity = 'COMÚN'; price = 20; } }
+            else if (isPremium) {
+                name = ["Galáctica", "Cibernética", "Fénix", "Ártico", "Sombra", "Oro", "Diamante", "Rubí", "Infinito", "Caos", "Nova", "Dragón", "Samurái", "Ninja", "Robot", "Alien", "Cósmico", "Titanio", "Obsidiana", "Relámpago", "Quásar", "Espectral", "Místico", "Supremo"][(num-1)%24] || "Premium " + num;
+                if (num % 6 === 0) {
+                    rarity = 'LEGENDARIA';
+                    price = 8500 + (num % 5) * 500; // 8,500 - 10,500
+                } else if (num % 2 === 0) {
+                    rarity = 'ÉPICA';
+                    price = 3200 + (num % 8) * 200; // 3,200 - 4,600
+                } else {
+                    rarity = 'COMÚN';
+                    price = 1200 + (num % 4) * 150; // 1,200 - 1,650
+                }
+            }
             else if (isExcl) { excl = true; rarity = 'EXCLUSIVE'; if (path.includes('(1)')) { name = "Fénix Oscuro"; req = "Nivel 10 del Pase"; path = `procedural_1100`; } else if (path.includes('(2)')) { name = "Súper Nova"; req = "Nivel 30 del Pase"; path = `procedural_1200`; } else if (path.includes('Micky')) { name = "Cyber Micky"; req = "50 victorias LAN"; } }
             const url = path.startsWith('procedural_') ? "" : `ui/images/${path}`;
             this.skins[path] = { id: path, name: name.toUpperCase(), url: url, price: price, level: lvl, exclusive: excl, req: req, rarity: rarity };
@@ -340,7 +397,7 @@
     renderSlipPass() {
         const list = document.getElementById('passRewardsList');
         if (!list) return;
-        const p = window.progression || { passLevel: 1, slipXP: 0, claimedRewards: [] };
+        const p = window.progression || { passLevel: 1, slipXP: 0, claimedRewards: [], passPurchased: false };
 
         const lvlEl = document.getElementById('passLvlText'), xpText = document.getElementById('passXPText'), xpFill = document.getElementById('passXPFill'), pctText = document.getElementById('passPercentText');
         if (lvlEl) lvlEl.innerText = p.passLevel;
@@ -349,37 +406,137 @@
         if (xpFill) xpFill.style.width = percent + '%';
         if (pctText) pctText.innerText = `${percent}% COMPLETADO`;
 
+        // Botón de compra del pase si no lo tiene
+        let buySection = '';
+        if (!p.passPurchased) {
+            buySection = `
+                <div style="grid-column: 1/-1; background: linear-gradient(135deg, #8b5cf6, #ec4899); padding: 20px; border-radius: 20px; margin-bottom: 20px; text-align: center; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);">
+                    <div style="font-weight: 950; color: #fff; font-size: 1.2rem; margin-bottom: 5px;">SLIP PASS ELITE</div>
+                    <div style="font-size: 0.75rem; color: #fff; opacity: 0.9; margin-bottom: 15px;">¡Desbloquea todas las recompensas premium y skins exclusivas!</div>
+                    <button onclick="Menu.buySlipPass()" class="item-price-btn" style="background: #fff; color: #8b5cf6; width: auto; padding: 12px 30px; margin: 0 auto; display: block; font-size: 0.9rem;">
+                        💰 4,500 SLIP COINS
+                    </button>
+                </div>
+            `;
+        }
+
         const rewards = [];
         for (let i = 1; i <= 20; i++) {
-            let reward = { lvl: i, name: `CRÉDITOS SLIP`, type: 'coins', value: 50, icon: '💰' };
-            if (i % 5 === 0) {
+            let reward = { lvl: i, name: `CRÉDITOS SLIP`, type: 'coins', value: 250, icon: '💰' };
+            if (i === 10) reward = { lvl: i, name: `EMOTE CORONA`, type: 'emote', value: '👑', icon: '👑' };
+            else if (i === 15) reward = { lvl: i, name: `EMOTE FUEGO`, type: 'emote', value: '🔥', icon: '🔥' };
+            else if (i === 20) reward = { lvl: i, name: `EMOTE DIAMANTE`, type: 'emote', value: '💎', icon: '💎' };
+            else if (i % 5 === 0) {
                 const seed = 1000 + (i * 7);
                 reward = { lvl: i, name: `SKIN PROTOCOLO`, type: 'skin', value: `procedural_${seed}`, icon: '🎭' };
             } else if (i % 3 === 0) {
-                reward = { lvl: i, name: `FRAGMENTO ADN`, type: 'dna', value: 5, icon: '🧬' };
+                reward = { lvl: i, name: `PAQUETE ADN`, type: 'dna', value: 15, icon: '🧬' };
             }
             rewards.push(reward);
         }
 
-        list.innerHTML = rewards.map(r => {
+        list.innerHTML = buySection + rewards.map(r => {
             const locked = r.lvl > p.passLevel, claimed = (p.claimedRewards || []).includes(r.lvl);
-            let btnTxt = locked ? "BLOQUEADO" : (claimed ? "RECLAMADO" : "RECLAMAR");
-            let btnClass = locked || claimed ? "disabled" : "";
-            return `<div class="pass-reward-card ${locked ? 'locked' : ''} ${claimed ? 'claimed' : ''}"><div class="pass-reward-lvl">NIVEL ${r.lvl}</div><div class="pass-reward-icon">${r.icon}</div><div class="pass-reward-name">${r.name}</div><button class="pass-claim-btn ${btnClass}" onclick="Menu.claimPassReward(${r.lvl})">${btnTxt}</button></div>`;
+            const isPremium = r.lvl % 2 === 0; // Por ejemplo, niveles pares son premium
+            const premiumLocked = isPremium && !p.passPurchased;
+
+            let btnTxt = locked ? "BLOQUEADO" : (premiumLocked ? "ELITE REQ" : (claimed ? "RECLAMADO" : "RECLAMAR"));
+            let btnClass = (locked || claimed || premiumLocked) ? "disabled" : "";
+            let premiumStyle = isPremium ? 'border: 1.5px solid #facc15; background: rgba(250, 204, 21, 0.05);' : '';
+
+            return `
+                <div class="pass-reward-card ${locked ? 'locked' : ''} ${claimed ? 'claimed' : ''}" style="${premiumStyle}">
+                    ${isPremium ? '<div style="position:absolute; top:5px; right:5px; font-size:10px; color:#facc15; font-weight:950;">ELITE</div>' : ''}
+                    <div class="pass-reward-lvl">NIVEL ${r.lvl}</div>
+                    <div class="pass-reward-icon">${r.icon}</div>
+                    <div class="pass-reward-name">${r.name}</div>
+                    <button class="pass-claim-btn ${btnClass}" onclick="Menu.claimPassReward(${r.lvl})">${btnTxt}</button>
+                </div>
+            `;
         }).join('');
+    },
+
+    buySlipPass() {
+        const p = window.progression;
+        const cost = 4500;
+        const cur = parseInt(localStorage.getItem('slipCoins') || 0);
+
+        if (cur >= cost) {
+            if (confirm(`¿Comprar Slip Pass Elite por ${cost} Monedas?`)) {
+                window.Engine.addCoins(-cost);
+                p.passPurchased = true;
+                window.Engine.saveProgression();
+                this.renderSlipPass();
+                alert("¡Slip Pass Elite activado! Ya puedes reclamar recompensas exclusivas.");
+            }
+        } else {
+            alert("No tienes suficientes monedas. ¡Visita la tienda para conseguir más!");
+            this.switchState(this.STATES.TIENDA);
+        }
     },
 
     claimPassReward(lvl) {
         const p = window.progression;
         if (!p || lvl > p.passLevel || (p.claimedRewards || []).includes(lvl)) return;
+
+        const isPremium = lvl % 2 === 0;
+        if (isPremium && !p.passPurchased) {
+            alert("Este nivel requiere el Slip Pass Elite.");
+            return;
+        }
+
         if (!p.claimedRewards) p.claimedRewards = [];
         p.claimedRewards.push(lvl);
-        if (lvl % 5 === 0) {
+
+        if (lvl === 10) this.unlockEmote("👑");
+        else if (lvl === 15) this.unlockEmote("🔥");
+        else if (lvl === 20) this.unlockEmote("💎");
+        else if (lvl % 5 === 0) {
             const skinId = `procedural_${1000 + (lvl * 7)}`;
             let pur = JSON.parse(localStorage.getItem(`purchasedSkins_${this.user.id}`) || "[]");
             if (!pur.includes(skinId)) { pur.push(skinId); localStorage.setItem(`purchasedSkins_${this.user.id}`, JSON.stringify(pur)); }
-        } else if (lvl % 3 === 0) { window.Engine.addDna(5); } else { window.Engine.addCoins(50); }
+        } else if (lvl % 3 === 0) { window.Engine.addDna(15); } else { window.Engine.addCoins(250); }
         window.Engine.saveProgression(); this.renderSlipPass(); this.updateMenuUI();
+    },
+
+    unlockEmote(emote) {
+        const userId = this.user ? this.user.id : 'guest';
+        let emotes = JSON.parse(localStorage.getItem(`unlockedEmotes_${userId}`) || "[]");
+        if (!emotes.includes(emote)) {
+            emotes.push(emote);
+            localStorage.setItem(`unlockedEmotes_${userId}`, JSON.stringify(emotes));
+            alert("¡Nuevo Emote desbloqueado: " + emote + "!");
+        }
+    },
+
+    toggleEmotePicker() {
+        const container = document.getElementById('emoteContainer');
+        if (!container) return;
+        if (container.style.display === 'flex') {
+            container.style.display = 'none';
+        } else {
+            container.style.display = 'flex';
+            this.renderEmotePicker();
+        }
+    },
+
+    renderEmotePicker() {
+        const list = document.getElementById('emoteList');
+        if (!list) return;
+        const userId = this.user ? this.user.id : 'guest';
+        const emotes = JSON.parse(localStorage.getItem(`unlockedEmotes_${userId}`) || "[]");
+        list.innerHTML = emotes.map(e => `
+            <div onclick="Menu.useEmote('${e}')" style="font-size: 2rem; cursor: pointer; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                ${e}
+            </div>
+        `).join('');
+    },
+
+    useEmote(emote) {
+        if (window.Player) {
+            window.Player.activeEmote = { text: emote, time: 180 }; // ~3 segundos a 60fps
+            document.getElementById('emoteContainer').style.display = 'none';
+        }
     },
 
     renderShopItems(cat) {
@@ -392,38 +549,92 @@
             return;
         }
 
-        grid.innerHTML = items.map(item => `
-            <div class="skin-card">
+        grid.innerHTML = (cat === 'coins' ? `
+            <div style="grid-column: 1/-1; background: linear-gradient(90deg, #facc1522, transparent); padding: 15px; border-left: 4px solid #facc15; margin-bottom: 10px; border-radius: 0 15px 15px 0;">
+                <div style="font-weight: 950; color: #facc15; font-size: 0.9rem; letter-spacing: 1px;">¿CANSADO DE FARMEAR?</div>
+                <div style="font-size: 0.7rem; color: #fff; opacity: 0.8; margin-top: 5px; font-weight: 700;">Salta el progreso lento y desbloquea todo el contenido Premium al instante.</div>
+            </div>
+        ` : '') + items.map(item => {
+            let btnContent = `${item.type === 'coins' ? '💰' : (item.type === 'dna' ? '🧬' : 'USD ')} ${item.price}`;
+            let btnColor = '#3b82f6';
+
+            if (item.type === 'usd') {
+                btnContent = `COMPRAR $${item.price}`;
+                btnColor = 'linear-gradient(135deg, #22c55e, #16a34a)';
+            }
+
+            return `
+            <div class="skin-card" style="overflow: visible;">
+                ${item.tag ? `<div style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 950; padding: 4px 8px; border-radius: 8px; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); animation: pulse 2s infinite;">${item.tag}</div>` : ''}
                 <div style="font-size:2.5rem; margin-bottom:15px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));">${item.icon}</div>
                 <div style="font-weight:900; font-size:0.75rem; color:#fff; text-transform:uppercase; text-align:center;">${item.name}</div>
                 <div style="font-size:0.6rem; color:#94a3b8; margin:10px 0; height:32px; text-align:center; line-height:1.2;">${item.desc}</div>
-                <button class="item-price-btn" style="background:#3b82f6;" onclick="Menu.buyItem('${cat}', '${item.id}')">
-                    ${item.type === 'coins' ? '💰' : '🧬'} ${item.price}
+                <button class="item-price-btn" style="background:${btnColor}; border:none; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onclick="Menu.buyItem('${cat}', '${item.id}')">
+                    ${btnContent}
                 </button>
             </div>
-        `).join('');
+        `}).join('');
     },
 
     buyItem(cat, itemId) {
         const item = (this.shopItems[cat] || []).find(i => i.id === itemId);
         if (!item) return;
+
+        if (item.type === 'usd') {
+            if (confirm(`¿Confirmar compra de ${item.name} por $${item.price}?`)) {
+                // MÓDULO DE PAGO REAL (Simulado)
+                if (window.AndroidBridge && window.AndroidBridge.processPurchase) {
+                    window.AndroidBridge.processPurchase(item.id, item.price);
+                } else {
+                    console.log(`Procesando pago externo de $${item.price} para ${item.id}...`);
+                    // Simular éxito inmediato para el usuario
+                    const r = item.reward;
+                    if (r.type === 'coins') window.Engine.addCoins(r.value);
+                    else if (r.type === 'dna') window.Engine.addDna(r.value);
+                    alert(`¡TRANSACCIÓN EXITOSA!\nHas recibido ${r.value} ${r.type.toUpperCase()}.`);
+                }
+                this.updateMenuUI();
+                return;
+            }
+            return;
+        }
+
         const balance = parseInt(localStorage.getItem(item.type === 'coins' ? 'slipCoins' : 'slipDna') || 0);
         if (balance >= item.price) {
-            // Cobrar
-            if (item.type === 'coins') window.Engine.addCoins(-item.price);
-            else window.Engine.addDna(-item.price);
+            if (confirm(`¿Comprar ${item.name}?`)) {
+                // Cobrar
+                if (item.type === 'coins') window.Engine.addCoins(-item.price);
+                else window.Engine.addDna(-item.price);
 
-            // Entregar Recompensa
-            if (cat === 'coins') window.Engine.addCoins(100);
-            else if (cat === 'dna') window.Engine.addDna(2);
-            else if (cat === 'mass') {
-                let m = parseInt(localStorage.getItem('slip_bonus_mass') || 0);
-                localStorage.setItem('slip_bonus_mass', m + (item.id === 'mass_1' ? 50 : 150));
+                // Entregar Recompensa
+                const r = item.reward;
+                if (r) {
+                    if (r.type === 'coins') window.Engine.addCoins(r.value);
+                    else if (r.type === 'dna') window.Engine.addDna(r.value);
+                    else if (r.type === 'bonus_mass') {
+                        let key = r.temporary ? 'slip_temp_mass' : 'slip_bonus_mass';
+                        let m = parseInt(localStorage.getItem(key) || 0);
+                        localStorage.setItem(key, m + r.value);
+                    } else if (r.type === 'bonus_speed') {
+                        let key = r.temporary ? 'slip_temp_speed' : 'slip_bonus_speed';
+                        let s = parseFloat(localStorage.getItem(key) || 0);
+                        localStorage.setItem(key, s + r.value);
+                    } else if (r.type === 'shield') {
+                        let s = parseInt(localStorage.getItem('slip_shields') || 0);
+                        localStorage.setItem('slip_shields', s + r.value);
+                    } else if (r.type === 'unlock_effect') {
+                        let effects = JSON.parse(localStorage.getItem('slip_unlocked_effects') || "[]");
+                        if (!effects.includes(r.value)) effects.push(r.value);
+                        localStorage.setItem('slip_unlocked_effects', JSON.stringify(effects));
+                    } else if (r.type === 'unlock_emote') {
+                        this.unlockEmote(r.value);
+                    }
+                }
+
+                alert(`¡Comprado: ${item.name}!`);
+                this.updateMenuUI();
+                this.renderShopItems(cat);
             }
-
-            alert(`¡Comprado: ${item.name}!`);
-            this.updateMenuUI();
-            this.renderShopItems(cat);
         }
         else alert("Saldo insuficiente");
     },
@@ -465,10 +676,10 @@
             if(v) v.classList.add('active');
             title.innerText = cat === 'coins' ? "Dinero" : "Laboratorio";
             this.renderShopItems(cat);
-        } else if (['mass','speed','potions'].includes(cat)) {
+        } else if (['mass','speed','potions','emotes'].includes(cat)) {
             const v = document.getElementById('shopItemsView');
             if(v) v.classList.add('active');
-            title.innerText = cat==='mass'?'Maza':(cat==='speed'?'Velocidad':'Pociones');
+            title.innerText = cat==='mass'?'Maza':(cat==='speed'?'Velocidad':(cat==='emotes'?'Emotes':'Pociones'));
             this.renderShopItems(cat);
         }
     },
@@ -528,30 +739,36 @@
         }
 
         const hud = document.getElementById('hudTopGroup');
-        if (hud) hud.style.display = (s === this.STATES.MENU) ? 'block' : 'none';
+        const isMenuOrModal = (s === this.STATES.MENU) || isModal;
+        if (hud) hud.style.display = isMenuOrModal ? 'block' : 'none';
 
         this.renderAllIcons();
     },
 
     getScreenIdFromState(s) {
-        const map = { [this.STATES.MENU]: 'menu', [this.STATES.TIENDA]: 'shopModal', [this.STATES.PAUSA]: 'pauseModal', [this.STATES.MUERTE]: 'gameOverScreen', 'ESTADO_PERFIL': 'profileModal', 'ESTADO_AJUSTES': 'settingsModal', 'ESTADO_LAN': 'lanModal', 'ESTADO_MISIONES': 'missionsModal', 'ESTADO_REGALO': 'dailyChest', 'ESTADO_GLOBAL': 'leaderboardModal', 'ESTADO_PASS': 'slipPassModal' };
+        const map = { [this.STATES.MENU]: 'menu', [this.STATES.TIENDA]: 'shopModal', [this.STATES.PAUSA]: 'pauseModal', [this.STATES.MUERTE]: 'gameOverScreen', [this.STATES.PERFIL]: 'profileModal', 'ESTADO_AJUSTES': 'settingsModal', 'ESTADO_LAN': 'lanModal', 'ESTADO_MISIONES': 'missionsModal', 'ESTADO_REGALO': 'dailyChest', 'ESTADO_GLOBAL': 'leaderboardModal', 'ESTADO_PASS': 'slipPassModal' };
         return map[s];
     },
 
     getStateFromScreenId(id) {
-        const map = { 'menu': this.STATES.MENU, 'shopModal': this.STATES.TIENDA, 'pauseModal': this.STATES.PAUSA, 'gameOverScreen': this.STATES.MUERTE, 'profileModal': 'ESTADO_PERFIL', 'settingsModal': 'ESTADO_AJUSTES', 'lanModal': 'ESTADO_LAN', 'missionsModal': 'ESTADO_MISIONES', 'dailyChest': 'ESTADO_REGALO', 'leaderboardModal': 'ESTADO_GLOBAL', 'slipPassModal': 'ESTADO_PASS' };
+        const map = { 'menu': this.STATES.MENU, 'shopModal': this.STATES.TIENDA, 'pauseModal': this.STATES.PAUSA, 'gameOverScreen': this.STATES.MUERTE, 'profileModal': this.STATES.PERFIL, 'settingsModal': 'ESTADO_AJUSTES', 'lanModal': 'ESTADO_LAN', 'missionsModal': 'ESTADO_MISIONES', 'dailyChest': 'ESTADO_REGALO', 'leaderboardModal': 'ESTADO_GLOBAL', 'slipPassModal': 'ESTADO_PASS' };
         return map[id];
     },
 
     openProfile() {
-        this.switchState('ESTADO_PERFIL');
+        this.switchState(this.STATES.PERFIL);
         const p = window.progression || { passLevel: 1, slipXP: 0 };
         const modalTitle = document.querySelector('#profileModal .modal-title');
         if (modalTitle) modalTitle.innerHTML = `Mi Perfil <small style="font-size: 0.8rem; opacity: 0.6;">(Lvl ${p.passLevel})</small>`;
-        document.getElementById('statMaxMass').innerText = Math.floor(localStorage.getItem('slip_max_mass') || 0);
-        document.getElementById('statTotalGames').innerText = localStorage.getItem('slip_total_games') || 0;
-        document.getElementById('statTotalEaten').innerText = localStorage.getItem('slip_total_eaten') || 0;
-        document.getElementById('statCoins').innerText = localStorage.getItem('slipCoins') || 0;
+
+        // Actualización de estadísticas con valores reales
+        const getStat = (key) => localStorage.getItem(key) || 0;
+        document.getElementById('statMaxMass').innerText = Math.floor(getStat('slip_max_mass'));
+        document.getElementById('statTotalGames').innerText = getStat('slip_total_games');
+        document.getElementById('statTotalEaten').innerText = getStat('slip_total_eaten');
+        document.getElementById('statMaxSurvived').innerText = (getStat('slip_max_survived') || 0) + "s";
+        document.getElementById('statCoins').innerText = getStat('slipCoins');
+
         const inp = document.getElementById('profileNameInput'); if (inp && this.user) inp.value = this.user.name;
         this.syncSkinImages();
     },

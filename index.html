@@ -92,6 +92,10 @@
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_speed"></div></div>
                     <div class="category-footer cyan">Velocidad</div>
                 </div>
+                <div class="shop-category-card" onclick="Menu.openShopCategory('emotes')">
+                    <div class="category-icon-bg"><div class="p-icon" id="icon_cat_emotes"></div></div>
+                    <div class="category-footer blue">Emotes</div>
+                </div>
                 <div class="shop-category-card" onclick="Menu.openShopCategory('potions')">
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_potions"></div></div>
                     <div class="category-footer pink">Pociones</div>
@@ -340,7 +344,11 @@
     </div>
     <div id="touchControls">
         <div id="joystickContainer"><div id="joystickBase"><div id="joystickStick"></div></div></div>
+        <div id="emoteContainer" style="position: absolute; bottom: 100px; left: 20px; display: none; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 20px; border: 2px solid #3b82f6; flex-direction: column; gap: 10px; pointer-events: auto;">
+            <div id="emoteList" style="display: flex; gap: 10px; pointer-events: auto;"></div>
+        </div>
         <div id="actionButtons">
+            <button id="btnEmote" class="touch-btn" style="background: rgba(59, 130, 246, 0.5);"><div class="p-icon" id="icon_emote"></div></button>
             <button id="btnSplit" class="touch-btn"><div class="p-icon" id="icon_split"></div></button>
             <button id="btnEject" class="touch-btn"><div class="p-icon" id="icon_eject"></div></button>
         </div>
@@ -362,6 +370,7 @@
 <script src="ui/hud.js"></script>
 <script src="ui/menu.js"></script>
 <script src="ui/audio.js"></script>
+<script src="features/updater.js"></script>
 <script src="core/engine.js"></script>
 
 </body>

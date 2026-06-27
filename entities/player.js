@@ -2,6 +2,7 @@ const Player = {
     name: "Jugador", skinKey: "skins gratis/Free (1).png", isDead: false, gameState: "MENU",
     cells: [], maxMass: 0, level: 1,
     killStreak: 0, lastKillTime: 0, equippedAura: localStorage.getItem('slip_equipped_aura') || null,
+    activeEmote: null, bonusSpeed: 0,
 
     getMass() { return this.cells.reduce((sum, c) => sum + c.mass, 0); },
     getCenter() {
@@ -23,9 +24,17 @@ const Player = {
         this.gameState = "PLAYING"; this.isDead = false;
 
         // Cargar Masa Extra de la Tienda
-        const bonusMass = parseInt(localStorage.getItem('slip_bonus_mass') || 0);
-        const startMass = 30 + bonusMass;
+        const permMass = parseInt(localStorage.getItem('slip_bonus_mass') || 0);
+        const tempMass = parseInt(localStorage.getItem('slip_temp_mass') || 0);
+        localStorage.setItem('slip_temp_mass', 0); // Consumir para esta partida
+        const startMass = 30 + permMass + tempMass;
         const startRadius = 30 * Math.sqrt(startMass / 30);
+
+        // Cargar Velocidad Extra
+        const permSpeed = parseFloat(localStorage.getItem('slip_bonus_speed') || 0);
+        const tempSpeed = parseFloat(localStorage.getItem('slip_temp_speed') || 0);
+        localStorage.setItem('slip_temp_speed', 0); // Consumir
+        this.bonusSpeed = permSpeed + tempSpeed;
 
         this.cells = [{
             x: 2500, y: 2500, mass: startMass, radius: startRadius, visualRadius: startRadius, targetRadius: startRadius,
@@ -135,10 +144,11 @@ const Player = {
             const dx = mouse.x - window.innerWidth/2, dy = mouse.y - window.innerHeight/2;
             const dist = Math.sqrt(dx*dx + dy*dy) || 1;
 
-            const speedLimit = (18 / Math.sqrt(cell.mass)) + 0.35;
+            const speedLimit = (18 / Math.sqrt(cell.mass)) + 0.35 + this.bonusSpeed;
 
-            cell.vx += (dx / dist) * 0.22;
-            cell.vy += (dy / dist) * 0.22;
+            const accel = 0.22 + (this.bonusSpeed * 0.5);
+            cell.vx += (dx / dist) * accel;
+            cell.vy += (dy / dist) * accel;
             cell.vx *= damping; cell.vy *= damping;
 
             const curSpeed = Math.sqrt(cell.vx*cell.vx + cell.vy*cell.vy);
@@ -239,6 +249,12 @@ const Player = {
             cell.x = Math.max(0, Math.min(window.World ? window.World.width : 5000, cell.x));
             cell.y = Math.max(0, Math.min(window.World ? window.World.height : 5000, cell.y));
         }
+
+        if (this.activeEmote) {
+            this.activeEmote.time--;
+            if (this.activeEmote.time <= 0) this.activeEmote = null;
+        }
+
         const mass = this.getMass();
         if (mass > this.maxMass) this.maxMass = mass;
     },
@@ -315,6 +331,17 @@ const Player = {
 
         // Texto del jugador (SOLO SI ES EL PRINCIPAL O NO ESTÁ DIVIDIDO)
         if (!isDivided || isMainFragment) {
+            if (this.activeEmote) {
+                ctx.save();
+                ctx.font = `${r * 0.8}px Inter`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                // Efecto flotante
+                const bounce = Math.sin(Date.now() * 0.01) * 5;
+                ctx.fillText(this.activeEmote.text, vcx, vcy - r - 40 + bounce);
+                ctx.restore();
+            }
+
             ctx.save();
             ctx.fillStyle = "#ffffff";
             ctx.font = `bold ${Math.max(12, r * 0.3)}px Inter`;

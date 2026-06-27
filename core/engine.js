@@ -293,6 +293,9 @@ var Engine = {
                     document.getElementById('chestInstruction').innerText = "Vuelve mañana";
 
                     localStorage.setItem(`lastClaimDate_${userId}`, today);
+                    // MÓDULO DE RETENCIÓN: Programar siguiente notificación de cofre (4 horas)
+                    localStorage.setItem("NEXT_CHEST_TIME", Date.now() + 14400000);
+                    localStorage.removeItem("CHEST_NOTIFIED");
 
                     if (window.AndroidBridge) {
                         window.AndroidBridge.sendLocalNotification("¡Regalo Reclamado!", `Has obtenido: ${rewardText}`);
@@ -762,6 +765,9 @@ function initControls() {
 
         var btnEject = document.getElementById('btnEject');
         if (btnEject) btnEject.addEventListener('touchstart', function(e) { if (!Engine.isPaused) { e.preventDefault(); Player.ejectMass(); } });
+
+        var btnEmote = document.getElementById('btnEmote');
+        if (btnEmote) btnEmote.addEventListener('touchstart', function(e) { if (!Engine.isPaused) { e.preventDefault(); if (window.Menu) window.Menu.toggleEmotePicker(); } });
 
         var pauseBtn = document.getElementById('pauseBtn');
         if (pauseBtn) pauseBtn.onclick = function(e) { e.stopPropagation(); Engine.togglePause(); };
