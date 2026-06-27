@@ -68,7 +68,10 @@ var Localization = {
             "accept": "ACEPTAR",
             "cancel": "CANCELAR",
             "confirm_purchase": "CONFIRMAR COMPRA",
-            "insufficient_balance": "SALDO INSUFICIENTE"
+            "insufficient_balance": "SALDO INSUFICIENTE",
+            "update_available": "NUEVA ACTUALIZACIÓN DISPONIBLE",
+            "installing_update": "INSTALANDO NÚCLEO...",
+            "update_installed": "Actualización Instalada"
         },
         en: {
             // Menu
@@ -136,7 +139,10 @@ var Localization = {
             "accept": "ACCEPT",
             "cancel": "CANCEL",
             "confirm_purchase": "CONFIRM PURCHASE",
-            "insufficient_balance": "INSUFFICIENT BALANCE"
+            "insufficient_balance": "INSUFFICIENT BALANCE",
+            "update_available": "NEW UPDATE AVAILABLE",
+            "installing_update": "INSTALLING CORE...",
+            "update_installed": "Update Installed"
         }
     },
 

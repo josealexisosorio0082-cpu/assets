@@ -147,6 +147,16 @@
             if (btn) btn.classList.toggle('active', !muted);
         });
 
+        bind('repairGameBtn', () => {
+            if (confirm("¿Deseas eliminar las actualizaciones descargadas y volver a la versión original de la APK?")) {
+                if (window.AndroidBridge && window.AndroidBridge.clearPatches) {
+                    window.AndroidBridge.clearPatches();
+                    localStorage.removeItem("LAST_DEPLOY_SHA");
+                    location.reload();
+                }
+            }
+        });
+
         // Botón Social (NUEVO)
         const socialBtn = document.createElement('div');
         socialBtn.className = 'icon-btn';
