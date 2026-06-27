@@ -569,6 +569,7 @@ var Engine = {
         if (!Player.isPlaying()) return;
         if (Player.isDead) {
             const stats = this.updateXP(Player.maxMass);
+            if (window.AudioManager) window.AudioManager.playGameOver();
             if (window.Menu) window.Menu.showGameOver(Player.maxMass, stats);
             Player.gameState = "MENU";
             return;
@@ -598,6 +599,7 @@ var Engine = {
                 }
 
                 if (distSq < attractionRadius * attractionRadius) {
+                    if (window.AudioManager) window.AudioManager.playEat();
                     if (f.isCoin) {
                         this.addCoins(1);
                         if (window.VisualEffects && window.VisualEffects.createShockwave) {

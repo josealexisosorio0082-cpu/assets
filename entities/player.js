@@ -130,6 +130,7 @@ const Player = {
                 if (window.VisualEffects.createShockwave) window.VisualEffects.createShockwave(cell.x, cell.y);
             }
         }
+        if (window.AudioManager) window.AudioManager.playSplit();
         this.cells = newCells;
     },
 
@@ -241,6 +242,7 @@ const Player = {
                     const canBotEatMe = other.mass > cell.mass * massDiff;
 
                     if (canEatBot && d < cell.radius - other.radius * 0.39) {
+                        if (window.AudioManager) window.AudioManager.playEat();
                         if (window.VisualEffects) window.VisualEffects.spawnVictim(other, cell);
                         cell.mass += other.mass * 0.9;
                         cell.targetRadius = 30 * Math.sqrt(cell.mass / 30);

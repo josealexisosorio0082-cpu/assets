@@ -67,11 +67,13 @@ const Bots = {
 
         // MÓDULO DE SKINS: Selección aleatoria de skin para que parezcan jugadores reales
         let skinKey = "ui/images/skins gratis/Free (1).png";
-        if (window.Menu && window.Menu.skins) {
+        if (window.Menu && window.Menu.skins && Object.keys(window.Menu.skins).length > 0) {
             const keys = Object.keys(window.Menu.skins);
-            if (keys.length > 0) {
-                skinKey = keys[Math.floor(Math.random() * keys.length)];
-            }
+            skinKey = keys[Math.floor(Math.random() * keys.length)];
+        } else {
+            // Fallback hardcodeado si el scanner aún no termina
+            const randomId = Math.floor(Math.random() * 10) + 1;
+            skinKey = `ui/images/skins gratis/Free (${randomId}).png`;
         }
 
         return {
@@ -386,7 +388,7 @@ const Bots = {
 
             // 2. Colisión con Virus
             if (other.spikes) {
-                if (d2 < bot.radius * bot.radius && bot.mass > other.radius * 1.1) {
+                if (d2 < bot.radius * bot.radius && bot.radius > other.radius * 1.1) {
                     bot.mass *= 0.5;
                     bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
                     const angle = Math.random() * Math.PI * 2;

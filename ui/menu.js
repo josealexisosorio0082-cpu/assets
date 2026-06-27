@@ -72,7 +72,11 @@
         // Eventos con addEventListener para evitar conflictos
         const bind = (id, fn) => {
             const el = document.getElementById(id);
-            if (el) el.onclick = (e) => { e.stopPropagation(); fn(e); };
+            if (el) el.onclick = (e) => {
+                e.stopPropagation();
+                if (window.AudioManager) window.AudioManager.playClick();
+                fn(e);
+            };
         };
 
         bind('playButton', () => this.startGame());
@@ -135,6 +139,13 @@
 
         bind('slipPassBtn', () => this.switchState('ESTADO_PASS'));
         bind('closePass', () => this.switchState(this.STATES.MENU));
+
+        bind('muteBtn', () => {
+            const muted = window.AudioManager.toggleMute();
+            const btn = document.getElementById('muteBtn');
+            if (btn) btn.innerText = muted ? "SONIDO: OFF" : "SONIDO: ON";
+            if (btn) btn.classList.toggle('active', !muted);
+        });
 
         // Botón Social (NUEVO)
         const socialBtn = document.createElement('div');
@@ -487,10 +498,17 @@
     updateQualityButtons() {
         const q = localStorage.getItem('game_quality') || 'high', ctrl = localStorage.getItem('slip_control_mode') || 'touch';
         const lang = localStorage.getItem('slip_lang') || 'es';
+        const muted = localStorage.getItem('slip_game_muted') === 'true';
 
         document.querySelectorAll('.g-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-quality') === q));
         document.querySelectorAll('.c-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-control') === ctrl));
         document.querySelectorAll('.l-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-lang') === lang));
+
+        const muteBtn = document.getElementById('muteBtn');
+        if (muteBtn) {
+            muteBtn.innerText = muted ? "SONIDO: OFF" : "SONIDO: ON";
+            muteBtn.classList.toggle('active', !muted);
+        }
     },
 
     changeLanguage(lang) {
@@ -647,6 +665,7 @@
                 this.updateShopCurrencies();
                 this.syncCloud();
 
+                if (window.AudioManager) window.AudioManager.playBuy();
                 this.showAlert("¡COMPRA EXITOSA!", `Aspecto ${s.name} equipado.`, "✨");
             }, () => {}, Localization.get("buy"), Localization.get("cancel"));
         } else {
@@ -906,6 +925,7 @@
                 }
 
                 this.showAlert("¡ITEM ADQUIRIDO!", `${item.name} ha sido añadido a tu inventario.`, "✅");
+                if (window.AudioManager) window.AudioManager.playBuy();
                 this.updateMenuUI();
                 this.renderShopItems(cat);
             }, () => {}, confirmBtn, "CANCELAR");
@@ -1326,6 +1346,8 @@
                 // Guardar skin
                 purchased.push(rewardSkin.id);
                 localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(purchased));
+
+                if (window.AudioManager) window.AudioManager.playBuy();
 
                 if (window.VisualEffects && window.VisualEffects.createShockwave) {
                     window.VisualEffects.createShockwave(window.innerWidth/2, window.innerHeight/2);

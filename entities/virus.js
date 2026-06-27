@@ -4,7 +4,8 @@ const Virus = {
     createVirus(x, y, vx = 0, vy = 0) {
         return {
             x, y, radius: 55, fed: 0, vx, vy,
-            breathPhase: Math.random() * Math.PI * 2
+            breathPhase: Math.random() * Math.PI * 2,
+            spikes: true
         };
     },
 
