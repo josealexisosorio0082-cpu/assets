@@ -276,7 +276,7 @@
             { id: 'icon_dna_shop', type: 'dna' }, { id: 'icon_coin_shop', type: 'coin' },
             { id: 'icon_cat_skins', type: 'free' }, { id: 'icon_cat_mass', type: 'missions' },
             { id: 'icon_cat_speed', type: 'lan' }, { id: 'icon_cat_emotes', type: 'emote' }, { id: 'icon_cat_potions', type: 'settings' },
-            { id: 'icon_cat_coins', type: 'coin' }, { id: 'icon_cat_dna', type: 'dna' },
+            { id: 'icon_cat_coins', type: 'coin' }, { id: 'icon_cat_dna', type: 'dna' }, { id: 'icon_cat_evo', type: 'dna' },
             { id: 'icon_split', type: 'split' }, { id: 'icon_eject', type: 'eject' },
             { id: 'icon_pause', type: 'pause' }, { id: 'icon_lb_toggle', type: 'lb_toggle' },
             { id: 'icon_emote', type: 'emote' }
