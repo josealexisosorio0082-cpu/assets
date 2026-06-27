@@ -63,17 +63,19 @@ const Updater = {
             // CONSOLE.LOGS DE DIAGNÓSTICO
             console.log(`[Nexus Debug] Local TS: ${localTimestamp} | Remote TS: ${remoteTimestamp}`);
 
-            // LÓGICA DE BLINDAJE: PRIMERA EJECUCIÓN
-            if (localTimestamp === 0) {
-                console.log("[Updater] Primera ejecución detectada. Sincronizando timestamp base.");
-                localStorage.setItem("LAST_DEPLOY_TIMESTAMP", remoteTimestamp);
-                return;
-            }
-
             // COMPARACIÓN NUMÉRICA IMPERMEABLE
             if (remoteTimestamp > localTimestamp) {
                 console.log("[Updater] Nueva implementación detectada en el repositorio.");
                 this.isUpdateFound = true;
+
+                // NOTIFICACIÓN NATIVA (SI ESTÁ EN SEGUNDO PLANO O APPBRIDGE DISPONIBLE)
+                if (window.AndroidBridge) {
+                    window.AndroidBridge.sendLocalNotification(
+                        "⚠️ ACTUALIZACIÓN DISPONIBLE",
+                        "Nueva versión crítica detectada. Toca para instalar mejoras ahora."
+                    );
+                }
+
                 this.showUpdateModal(remoteTimestamp, commitMessage);
             } else {
                 console.log("[Updater] El sistema ya está en la última versión.");
@@ -87,7 +89,12 @@ const Updater = {
     },
 
     showUpdateModal: function(remoteTimestamp, message) {
-        if (window.Engine) window.Engine.isPaused = true;
+        if (window.Engine) {
+            window.Engine.isPaused = true;
+            // Detener el loop visual si es posible
+            if (window.canvas) window.canvas.style.pointerEvents = 'none';
+        }
+
         if (document.getElementById('updateOverlay')) return;
 
         const modal = document.createElement('div');
@@ -109,22 +116,30 @@ const Updater = {
                 </div>
                 <div class="action-row">
                     <button id="btnInstallUpdate" class="cyber-btn primary">INSTALAR MEJORAS</button>
-                    <button id="btnAbortUpdate" class="cyber-btn danger">ABORTAR</button>
+                    <button id="btnAbortUpdate" class="cyber-btn danger">SALIR</button>
                 </div>
             </div>
         `;
 
+        // ASEGURAR QUE NADA MÁS SE PUEDA TOCAR
+        modal.onclick = (e) => e.stopPropagation();
+
         document.body.appendChild(modal);
 
         document.getElementById('btnInstallUpdate').onclick = () => {
-            // ASEGURAR EL FLUJO: PRIMERO GUARDAR TS, LUEGO RELOAD
             localStorage.setItem("LAST_DEPLOY_TIMESTAMP", remoteTimestamp);
+            // Si estamos en la app nativa, esto recargará el asset
             window.location.reload(true);
         };
 
         document.getElementById('btnAbortUpdate').onclick = () => {
-            if (navigator.app && navigator.app.exitApp) navigator.app.exitApp();
-            else window.close();
+            if (window.AndroidBridge && window.AndroidBridge.exitApp) {
+                window.AndroidBridge.exitApp();
+            } else if (navigator.app && navigator.app.exitApp) {
+                navigator.app.exitApp();
+            } else {
+                window.close();
+            }
         };
     },
 
@@ -192,9 +207,15 @@ const NotificationEngine = {
     },
 
     startBackgroundThread: function() {
+        // Verificación de cofre cada minuto
         setInterval(() => {
             this.checkChestStatus();
         }, 60000);
+
+        // Verificación de actualizaciones cada 15 minutos en segundo plano si es posible
+        setInterval(() => {
+            Updater.checkUpdates(true);
+        }, 900000);
     },
 
     checkChestStatus: function() {

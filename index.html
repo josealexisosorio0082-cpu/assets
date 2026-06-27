@@ -18,19 +18,19 @@
         <div class="loading-bar-container">
             <div id="loadingBarFill" class="loading-bar-fill"></div>
         </div>
-        <p id="loadingText" style="color: #fff !important; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; font-size: 0.7rem; opacity: 0.6; margin-top: 15px;">Sincronizando red neuronal...</p>
+        <p id="loadingText" style="color: #fff !important; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; font-size: 0.7rem; opacity: 0.6; margin-top: 15px;" data-i18n="loading_neural">Sincronizando red neuronal...</p>
     </div>
 </div>
 
 <!-- Menú Principal -->
 <div id="menu" class="ui-screen">
     <div class="menu-top-left">
-        <div class="icon-btn" id="freeCoinsBtn"><div class="p-icon" id="icon_free"></div><small>Gift</small></div>
-        <div class="icon-btn" id="globalLbBtn"><div class="p-icon" id="icon_global"></div><small>Top</small></div>
-        <div class="icon-btn" id="missionsBtn"><div class="p-icon" id="icon_missions"></div><small>Missions</small></div>
-        <div class="icon-btn" id="slipPassBtn"><div class="p-icon" id="icon_pass"></div><small>Pass</small></div>
-        <div class="icon-btn" id="settingsBtn"><div class="p-icon" id="icon_settings"></div><small>Setup</small></div>
-        <div class="icon-btn" id="lanBtn"><div class="p-icon" id="icon_lan"></div><small>LAN</small></div>
+        <div class="icon-btn" id="freeCoinsBtn"><div class="p-icon" id="icon_free"></div><small data-i18n="gift">Gift</small></div>
+        <div class="icon-btn" id="globalLbBtn"><div class="p-icon" id="icon_global"></div><small data-i18n="top">Top</small></div>
+        <div class="icon-btn" id="missionsBtn"><div class="p-icon" id="icon_missions"></div><small data-i18n="missions">Missions</small></div>
+        <div class="icon-btn" id="slipPassBtn"><div class="p-icon" id="icon_pass"></div><small data-i18n="pass">Pass</small></div>
+        <div class="icon-btn" id="settingsBtn"><div class="p-icon" id="icon_settings"></div><small data-i18n="setup">Setup</small></div>
+        <div class="icon-btn" id="lanBtn"><div class="p-icon" id="icon_lan"></div><small data-i18n="lan">LAN</small></div>
     </div>
 
     <div class="menu-top-right">
@@ -53,15 +53,15 @@
 
     <div class="center-panel">
         <h1 class="game-title">Slip Game</h1>
-        <div class="subtitle">CREADOR ALEXIS OSORIO | v0.1</div>
+        <div class="subtitle" data-i18n="creator">CREADOR ALEXIS OSORIO | v0.1</div>
 
         <div class="main-card">
-            <input type="text" id="playerName" placeholder="Usuario..." maxlength="15">
+            <input type="text" id="playerName" placeholder="Usuario..." maxlength="15" data-i18n="player_placeholder">
         </div>
 
         <div class="action-grid">
-            <button id="playButton" class="play-btn">START</button>
-            <button id="shopBtn" class="shop-btn">SHOP</button>
+            <button id="playButton" class="play-btn" data-i18n="start">START</button>
+            <button id="shopBtn" class="shop-btn" data-i18n="shop">SHOP</button>
         </div>
     </div>
 </div>
@@ -70,8 +70,8 @@
 <div id="shopModal" class="ui-screen shop-modal">
     <div class="shop-container">
         <div class="shop-header">
-            <div id="closeShop" class="shop-back-btn">VOLVER</div>
-            <div class="shop-title" id="shopTitleText">MARKET</div>
+            <div id="closeShop" class="shop-back-btn" data-i18n="back">VOLVER</div>
+            <div class="shop-title" id="shopTitleText" data-i18n="market">MARKET</div>
             <div class="currency-container">
                 <div class="currency-item dna"><div class="currency-icon" id="icon_dna_shop"></div><span id="shopDnaCount">0</span></div>
                 <div class="currency-item coins"><div class="currency-icon" id="icon_coin_shop"></div><span id="shopCoinCount">0</span></div>
@@ -82,41 +82,41 @@
             <div class="shop-grid">
                 <div class="shop-category-card" onclick="Menu.openShopCategory('skins')">
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_skins"></div></div>
-                    <div class="category-footer yellow">Skins</div>
+                    <div class="category-footer yellow" data-i18n="skins">Skins</div>
                 </div>
                 <div class="shop-category-card" onclick="Menu.openShopCategory('mass')">
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_mass"></div></div>
-                    <div class="category-footer orange">Maza</div>
+                    <div class="category-footer orange" data-i18n="mass">Maza</div>
                 </div>
                 <div class="shop-category-card" onclick="Menu.openShopCategory('speed')">
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_speed"></div></div>
-                    <div class="category-footer cyan">Velocidad</div>
+                    <div class="category-footer cyan" data-i18n="speed">Velocidad</div>
                 </div>
                 <div class="shop-category-card" onclick="Menu.openShopCategory('emotes')">
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_emotes"></div></div>
-                    <div class="category-footer blue">Emotes</div>
+                    <div class="category-footer blue" data-i18n="emotes">Emotes</div>
                 </div>
                 <div class="shop-category-card" onclick="Menu.openShopCategory('potions')">
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_potions"></div></div>
-                    <div class="category-footer pink">Pociones</div>
+                    <div class="category-footer pink" data-i18n="potions">Pociones</div>
                 </div>
                 <div class="shop-category-card" onclick="Menu.openShopCategory('coins')">
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_coins"></div></div>
-                    <div class="category-footer green">Dinero</div>
+                    <div class="category-footer green" data-i18n="money">Dinero</div>
                 </div>
                 <div class="shop-category-card" onclick="Menu.openShopCategory('dna')">
                     <div class="category-icon-bg"><div class="p-icon" id="icon_cat_dna"></div></div>
-                    <div class="category-footer purple">Laboratorio</div>
+                    <div class="category-footer purple" data-i18n="lab">Laboratorio</div>
                 </div>
             </div>
         </div>
 
         <div id="shopSkinsView" class="shop-content-view">
             <div class="shop-tabs">
-                <div class="shop-tab active" onclick="Menu.filterSkins('premium')">PREMIUM</div>
-                <div class="shop-tab" onclick="Menu.filterSkins('level')">LEVELS</div>
-                <div class="shop-tab exclusive" onclick="Menu.filterSkins('exclusive')">EXCL</div>
-                <div class="shop-tab" onclick="Menu.filterSkins('free')">FREE</div>
+                <div class="shop-tab active" onclick="Menu.filterSkins('premium')" data-i18n="premium">PREMIUM</div>
+                <div class="shop-tab" onclick="Menu.filterSkins('level')" data-i18n="levels">LEVELS</div>
+                <div class="shop-tab exclusive" onclick="Menu.filterSkins('exclusive')" data-i18n="exclusive">EXCL</div>
+                <div class="shop-tab" onclick="Menu.filterSkins('free')" data-i18n="free">FREE</div>
             </div>
             <div id="skinGrid" class="skins-grid"></div>
         </div>
@@ -151,60 +151,70 @@
                     <div id="profileRankName" class="rank-label-new">VIRUS</div>
                     <div id="profileLevelTag" style="font-size: 0.6rem; background: rgba(139, 92, 246, 0.2); padding: 2px 6px; border-radius: 4px; color: #a78bfa; font-weight: 950; border: 1px solid rgba(139, 92, 246, 0.3);">LVL 1</div>
                 </div>
-                <input type="text" id="profileNameInput" class="name-input-new" placeholder="Nombre..." maxlength="15">
+                <input type="text" id="profileNameInput" class="name-input-new" placeholder="Nombre..." maxlength="15" data-i18n="player_placeholder">
             </div>
         </div>
 
         <div class="stats-grid-compact">
             <div class="stat-box-new">
                 <span class="stat-val-new" id="statMaxMass">0</span>
-                <span class="stat-lbl-new">MAX MASA</span>
+                <span class="stat-lbl-new" data-i18n="max_mass">MAX MASA</span>
             </div>
             <div class="stat-box-new">
                 <span class="stat-val-new" id="statTotalGames">0</span>
-                <span class="stat-lbl-new">PARTIDAS</span>
+                <span class="stat-lbl-new" data-i18n="games">PARTIDAS</span>
             </div>
             <div class="stat-box-new">
                 <span class="stat-val-new" id="statMaxSurvived">0s</span>
-                <span class="stat-lbl-new">SURVIVE</span>
+                <span class="stat-lbl-new" data-i18n="survive">SURVIVE</span>
             </div>
             <div class="stat-box-new">
                 <span class="stat-val-new" id="statTotalEaten">0</span>
-                <span class="stat-lbl-new">KILLS</span>
+                <span class="stat-lbl-new" data-i18n="kills">KILLS</span>
             </div>
         </div>
 
         <div class="plasma-credits-compact">
             <div class="plasma-icon-small"></div>
             <div class="plasma-info-new">
-                <span class="plasma-lbl-new">CRÉDITOS DE PLASMA</span>
+                <span class="plasma-lbl-new" data-i18n="plasma_credits">CRÉDITOS DE PLASMA</span>
                 <span id="statCoins" class="plasma-val-new">0</span>
             </div>
         </div>
 
-        <button id="goToSkinsFromProfile" class="btn-blue-compact">PERSONALIZAR AVATAR</button>
+        <button id="goToSkinsFromProfile" class="btn-blue-compact" data-i18n="customize_avatar">PERSONALIZAR AVATAR</button>
     </div>
 </div>
 
 <!-- Modal Ajustes -->
 <div id="settingsModal" class="ui-screen">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 400px; padding-top: 50px;">
         <div id="closeSettings" class="back-btn-circle">✖</div>
-        <h2 class="modal-title">Configuración</h2>
+        <h2 class="modal-title" data-i18n="settings_title">Configuración</h2>
+
         <div class="input-group">
-            <span class="input-label">Calidad Gráfica</span>
-            <div class="action-grid" style="grid-template-columns: 1fr 1fr;">
-                <button class="g-btn" data-quality="low">BAJA</button>
-                <button class="g-btn" data-quality="medium">MEDIA</button>
-                <button class="g-btn" data-quality="high">ALTA</button>
-                <button class="g-btn" data-quality="very_high">ULTRA</button>
+            <span class="input-label" data-i18n="graphic_quality">Calidad Gráfica</span>
+            <div class="settings-grid">
+                <button class="settings-btn g-btn" data-quality="low" data-i18n="quality_low">BAJA</button>
+                <button class="settings-btn g-btn" data-quality="medium" data-i18n="quality_medium">MEDIA</button>
+                <button class="settings-btn g-btn" data-quality="high" data-i18n="quality_high">ALTA</button>
+                <button class="settings-btn g-btn" data-quality="very_high" data-i18n="quality_ultra">ULTRA</button>
             </div>
         </div>
+
         <div class="input-group">
-            <span class="input-label">Controles</span>
-            <div class="action-grid" style="grid-template-columns: 1fr 1fr;">
-                <button class="c-btn" data-control="touch">TOUCH</button>
-                <button class="c-btn" data-control="pc">MOUSE</button>
+            <span class="input-label" data-i18n="controls">Controles</span>
+            <div class="settings-grid" style="grid-template-columns: 1fr 1fr;">
+                <button class="settings-btn c-btn" data-control="touch" data-i18n="control_touch">TOUCH</button>
+                <button class="settings-btn c-btn" data-control="pc" data-i18n="control_mouse">MOUSE</button>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <span class="input-label" data-i18n="language">Idioma</span>
+            <div class="settings-grid" style="grid-template-columns: 1fr 1fr;">
+                <button class="settings-btn l-btn" data-lang="es">Español</button>
+                <button class="settings-btn l-btn" data-lang="en">English</button>
             </div>
         </div>
     </div>
@@ -322,9 +332,9 @@
 <!-- Pantalla Game Over -->
 <div id="gameOverScreen" class="ui-screen">
     <div class="modal-content" style="border-color: #ef4444; box-shadow: 0 0 40px rgba(239, 68, 68, 0.2);">
-        <h2 class="modal-title" style="color: #ef4444; text-shadow: 0 0 15px rgba(239, 68, 68, 0.6);">Game Over</h2>
+        <h2 class="modal-title" style="color: #ef4444; text-shadow: 0 0 15px rgba(239, 68, 68, 0.6);" data-i18n="game_over">Game Over</h2>
         <div style="margin-bottom: 25px;">
-            <div style="font-size: 0.7rem; font-weight: 900; color: #94a3b8; margin-bottom: 5px;">MASA MÁXIMA ALCANZADA</div>
+            <div style="font-size: 0.7rem; font-weight: 900; color: #94a3b8; margin-bottom: 5px;" data-i18n="final_mass_title">MASA MÁXIMA ALCANZADA</div>
             <div id="finalMass" style="font-size: 3.5rem; font-weight: 950; color: #fff;">0</div>
         </div>
         <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 25px;">
@@ -334,7 +344,7 @@
             </div>
             <div class="stat-card" style="flex: 1; border-color: #3b82f6;">
                 <div id="xpGainedText" class="stat-value" style="color: #3b82f6;">+0 XP</div>
-                <div class="stat-label">EXPERIENCIA</div>
+                <div class="stat-label" data-i18n="experience">EXPERIENCIA</div>
             </div>
         </div>
         <div style="width: 100%; margin-bottom: 30px;">
@@ -344,8 +354,8 @@
             </div>
         </div>
         <div class="action-grid" style="grid-template-columns: 1fr; gap: 12px; width: 100%;">
-            <button id="restartButton" class="play-btn" style="height: 60px;">Reintentar</button>
-            <button id="exitToMenuBtn" class="btn-gray">Menú Principal</button>
+            <button id="restartButton" class="play-btn" style="height: 60px;" data-i18n="retry">Reintentar</button>
+            <button id="exitToMenuBtn" class="btn-gray" data-i18n="main_menu">Menú Principal</button>
         </div>
     </div>
 </div>
@@ -390,6 +400,7 @@
 <canvas id="gameCanvas"></canvas>
 
 <script src="config.js"></script>
+<script src="ui/localization.js"></script>
 <script src="features/VisualEffects.js"></script>
 <script src="features/Camera.js"></script>
 <script src="entities/player.js"></script>
