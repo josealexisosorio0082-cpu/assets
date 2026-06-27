@@ -66,14 +66,13 @@ const Bots = {
         const angle = Math.random() * Math.PI * 2;
 
         // MÓDULO DE SKINS: Selección aleatoria de skin para que parezcan jugadores reales
-        let skinKey = "ui/images/skins gratis/Free (1).png";
+        let skinKey = "ui/images/skins gratis/boom.png";
         if (window.Menu && window.Menu.skins && Object.keys(window.Menu.skins).length > 0) {
             const keys = Object.keys(window.Menu.skins);
             skinKey = keys[Math.floor(Math.random() * keys.length)];
         } else {
             // Fallback hardcodeado si el scanner aún no termina
-            const randomId = Math.floor(Math.random() * 10) + 1;
-            skinKey = `ui/images/skins gratis/Free (${randomId}).png`;
+            skinKey = "ui/images/skins gratis/boom.png";
         }
 
         return {

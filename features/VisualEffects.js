@@ -125,29 +125,47 @@
     },
 
     drawProceduralSkin(ctx, x, y, radius, seed) {
-        const cacheKey = `skin_${seed}_${Math.floor(radius)}`;
+        // MÓDULO DE OPTIMIZACIÓN: Cachear por SEED a resolución fija
+        // Esto evita crear miles de canvas cuando el radio cambia
+        const cacheKey = `skin_${seed}`;
         const q = localStorage.getItem('game_quality') || 'high';
+
         if (q === 'low') {
             ctx.fillStyle = `hsl(${seed % 360}, 70%, 50%)`;
             ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
             return;
         }
+
         if (!this.skinCache[cacheKey]) {
-            const size = radius * 2 + 10;
-            const offCanvas = document.createElement('canvas'); offCanvas.width = size; offCanvas.height = size;
+            // Resolución fija de 128x128 para el cache
+            const size = 128;
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = size;
+            offCanvas.height = size;
             const offCtx = offCanvas.getContext('2d');
             const cx = size/2, cy = size/2;
-            const grad = offCtx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+            const r = (size/2) - 5; // Margen de seguridad
+
+            const grad = offCtx.createRadialGradient(cx, cy, 0, cx, cy, r);
             grad.addColorStop(0, `hsl(${seed % 360}, 80%, 60%)`);
             grad.addColorStop(1, `hsl(${(seed + 40) % 360}, 90%, 40%)`);
+
             offCtx.fillStyle = grad;
-            offCtx.beginPath(); offCtx.arc(cx, cy, radius, 0, Math.PI * 2); offCtx.fill();
+            offCtx.beginPath();
+            offCtx.arc(cx, cy, r, 0, Math.PI * 2);
+            offCtx.fill();
+
             offCtx.strokeStyle = `hsl(${(seed + 180) % 360}, 100%, 70%)`;
-            offCtx.lineWidth = 2;
-            offCtx.beginPath(); offCtx.ellipse(cx, cy, radius * 0.8, radius * 0.3, seed, 0, Math.PI * 2); offCtx.stroke();
+            offCtx.lineWidth = 4;
+            offCtx.beginPath();
+            offCtx.ellipse(cx, cy, r * 0.8, r * 0.3, seed, 0, Math.PI * 2);
+            offCtx.stroke();
+
             this.skinCache[cacheKey] = offCanvas;
         }
-        ctx.drawImage(this.skinCache[cacheKey], x - radius - 5, y - radius - 5);
+
+        // Dibujar escalando el cache al radio actual
+        ctx.drawImage(this.skinCache[cacheKey], x - radius, y - radius, radius * 2, radius * 2);
     },
 
     drawBadge(ctx, x, y, size, type) {

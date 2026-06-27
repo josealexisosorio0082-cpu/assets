@@ -1,5 +1,5 @@
 const Player = {
-    name: "Jugador", skinKey: "ui/images/skins gratis/Free (1).png", isDead: false, gameState: "MENU",
+    name: "Jugador", skinKey: "ui/images/skins gratis/boom.png", isDead: false, gameState: "MENU",
     cells: [], maxMass: 0, level: 1,
     killStreak: 0, lastKillTime: 0, equippedAura: localStorage.getItem('slip_equipped_aura') || null,
     activeEmote: null, bonusSpeed: 0,
@@ -293,111 +293,120 @@ const Player = {
     },
 
     renderCell(ctx, camera, cell) {
-        // MÓDULO 3: OPTIMIZACIÓN EXTREMA DE AURAS Y DIVISIONES
-        // Si el jugador está dividido, solo renderizar efectos en el fragmento más grande
-        const isMainFragment = (cell === this.mainFragment);
-        const isDivided = this.cells.length > 1;
+        try {
+            // MÓDULO 3: OPTIMIZACIÓN EXTREMA DE AURAS Y DIVISIONES
+            const isMainFragment = (cell === this.mainFragment);
+            const isDivided = this.cells.length > 1;
 
-        const sx = cell.x - camera.x, sy = cell.y - camera.y;
-        const r = cell.visualRadius;
-        const visuals = (window.CONFIG && window.CONFIG.visuals) ? window.CONFIG.visuals : { renderBorders: true };
-        const pts = cell.points;
+            const sx = cell.x - camera.x, sy = cell.y - camera.y;
+            const r = cell.visualRadius || 1;
+            const visuals = (window.CONFIG && window.CONFIG.visuals) ? window.CONFIG.visuals : { renderBorders: true };
+            const pts = cell.points;
 
-        let vcx = sx, vcy = sy;
-        if (pts && pts.length > 0) {
-            let ox = 0, oy = 0;
-            for(let i=0; i<pts.length; i++) { ox += pts[i].x; oy += pts[i].y; }
-            vcx = sx + (ox / pts.length);
-            vcy = sy + (oy / pts.length);
-        }
-
-        const isLow = (window.CONFIG && window.CONFIG.quality === 'low');
-
-        // MÓDULO 3: Renderizado de Aura (SOLO SI ES EL PRINCIPAL O NO ESTÁ DIVIDIDO)
-        const currentRP = (window.progression && window.progression.rankPoints) || 0;
-        const isGod = currentRP >= 2000;
-        if (!isLow && window.VisualEffects && window.VisualEffects.renderAura && (!isDivided || isMainFragment)) {
-            if (this.equippedAura || isGod) {
-                window.VisualEffects.renderAura(ctx, vcx, vcy, r, this.equippedAura || 'fire');
+            let vcx = sx, vcy = sy;
+            if (pts && pts.length > 0) {
+                let ox = 0, oy = 0;
+                for(let i=0; i<pts.length; i++) { ox += pts[i].x; oy += pts[i].y; }
+                vcx = sx + (ox / pts.length);
+                vcy = sy + (oy / pts.length);
             }
-        }
 
-        ctx.save();
+            const isLow = (window.CONFIG && window.CONFIG.quality === 'low');
 
-        // Renderizado del cuerpo
-        if (pts && pts.length > 0) {
-            ctx.beginPath();
-            ctx.moveTo((pts[0].x + pts[pts.length-1].x)/2 + sx, (pts[0].y + pts[pts.length-1].y)/2 + sy);
-            for(let k=0; k<pts.length; k++) {
-                const p = pts[k], next = pts[(k+1)%pts.length];
-                ctx.quadraticCurveTo(p.x + sx, p.y + sy, (p.x + next.x)/2 + sx, (p.y + next.y)/2 + sy);
-            }
-            ctx.closePath();
-        } else {
-            ctx.beginPath();
-            ctx.arc(sx, sy, r, 0, Math.PI * 2);
-        }
-
-        // Borde dinámico
-        if (visuals.renderBorders) {
-            ctx.lineWidth = Math.max(3, r * 0.05);
-            ctx.strokeStyle = "rgba(0, 0, 0, 0.1)";
-            ctx.stroke();
-        }
-
-        ctx.clip();
-
-        // Dibujamos la skin centrada en el centro visual calculado
-        if (window.Menu) window.Menu.drawSkinTexture(ctx, vcx, vcy, r, this.skinKey, true);
-
-        ctx.restore();
-
-        // MÓDULO 2: Renderizado de Insignia de Rango
-        if (window.VisualEffects && window.VisualEffects.drawBadge) {
-            let rankId = 'virus';
-            if (currentRP >= 2500) rankId = 'deidad';
-            else if (currentRP >= 1200) rankId = 'espectro';
-            else if (currentRP >= 600) rankId = 'titan';
-            else if (currentRP >= 200) rankId = 'mutante';
-            window.VisualEffects.drawBadge(ctx, vcx, vcy - r - 10, r * 0.4, rankId);
-        }
-
-        // Texto del jugador (SOLO SI ES EL PRINCIPAL O NO ESTÁ DIVIDIDO)
-        if (!isDivided || isMainFragment) {
-            if (this.activeEmote) {
-                ctx.save();
-                ctx.font = `${r * 0.8}px Inter`;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                // Efecto flotante
-                const bounce = Math.sin(Date.now() * 0.01) * 5;
-                ctx.fillText(this.activeEmote.text, vcx, vcy - r - 40 + bounce);
-                ctx.restore();
+            // MÓDULO 3: Renderizado de Aura
+            const currentRP = (window.progression && window.progression.rankPoints) || 0;
+            const isGod = currentRP >= 2000;
+            if (!isLow && window.VisualEffects && window.VisualEffects.renderAura && (!isDivided || isMainFragment)) {
+                if (this.equippedAura || isGod) {
+                    window.VisualEffects.renderAura(ctx, vcx, vcy, r, this.equippedAura || 'fire');
+                }
             }
 
             ctx.save();
-            ctx.fillStyle = "#ffffff";
-            ctx.font = `bold ${Math.max(12, r * 0.3)}px Inter`;
-            ctx.textAlign = "center";
-            ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
-            ctx.lineWidth = 2;
 
-            if (visuals.shadowBlur > 20) {
-                ctx.shadowBlur = 4;
-                ctx.shadowColor = "black";
+            // Renderizado del cuerpo
+            if (pts && pts.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo((pts[0].x + pts[pts.length-1].x)/2 + sx, (pts[0].y + pts[pts.length-1].y)/2 + sy);
+                for(let k=0; k<pts.length; k++) {
+                    const p = pts[k], next = pts[(k+1)%pts.length];
+                    ctx.quadraticCurveTo(p.x + sx, p.y + sy, (p.x + next.x)/2 + sx, (p.y + next.y)/2 + sy);
+                }
+                ctx.closePath();
+            } else {
+                ctx.beginPath();
+                ctx.arc(sx, sy, r, 0, Math.PI * 2);
             }
 
-            ctx.strokeText(this.name, vcx, vcy - 2);
-            ctx.fillText(this.name, vcx, vcy - 2);
-
-            if (r > 45) {
-                ctx.font = `bold ${Math.max(10, r * 0.15)}px Inter`;
-                ctx.fillStyle = "#eeeeee";
-                const displayLvl = (window.progression && window.progression.passLevel) ? window.progression.passLevel : this.level;
-                ctx.strokeText(`⭐ Lvl ${displayLvl}`, vcx, vcy + (r * 0.3));
-                ctx.fillText(`⭐ Lvl ${displayLvl}`, vcx, vcy + (r * 0.3));
+            // Borde dinámico
+            if (visuals.renderBorders) {
+                ctx.lineWidth = Math.max(3, r * 0.05);
+                ctx.strokeStyle = "rgba(0, 0, 0, 0.1)";
+                ctx.stroke();
             }
+
+            ctx.clip();
+
+            // Dibujamos la skin centrada en el centro visual calculado
+            if (window.Menu && typeof window.Menu.drawSkinTexture === 'function') {
+                window.Menu.drawSkinTexture(ctx, vcx, vcy, r, this.skinKey, false);
+            }
+
             ctx.restore();
+
+            // MÓDULO 2: Renderizado de Insignia de Rango
+            if (window.VisualEffects && window.VisualEffects.drawBadge) {
+                let rankId = 'virus';
+                if (currentRP >= 5000) rankId = 'deidad';
+                else if (currentRP >= 2500) rankId = 'espectro';
+                else if (currentRP >= 1200) rankId = 'titan';
+                else if (currentRP >= 400) rankId = 'mutante';
+                window.VisualEffects.drawBadge(ctx, vcx, vcy - r - 10, Math.max(10, r * 0.4), rankId);
+            }
+
+            // Texto del jugador
+            if (!isDivided || isMainFragment) {
+                if (this.activeEmote && this.activeEmote.text) {
+                    ctx.save();
+                    const emoteSize = Math.max(20, r * 0.8);
+                    ctx.font = `${emoteSize}px Inter`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    const bounce = Math.sin(Date.now() * 0.01) * 5;
+                    ctx.fillText(this.activeEmote.text, vcx, vcy - r - 40 + bounce);
+                    ctx.restore();
+                }
+
+                ctx.save();
+                ctx.fillStyle = "#ffffff";
+                const fontSize = Math.max(12, r * 0.3);
+                ctx.font = `bold ${fontSize}px Inter`;
+                ctx.textAlign = "center";
+                ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+                ctx.lineWidth = 2;
+
+                if (visuals.shadowBlur > 20) {
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = "black";
+                }
+
+                ctx.strokeText(this.name, vcx, vcy - 2);
+                ctx.fillText(this.name, vcx, vcy - 2);
+
+                if (r > 45) {
+                    const subFontSize = Math.max(10, r * 0.15);
+                    ctx.font = `bold ${subFontSize}px Inter`;
+                    ctx.fillStyle = "#eeeeee";
+                    const displayLvl = (window.progression && window.progression.passLevel) ? window.progression.passLevel : this.level;
+                    ctx.strokeText(`⭐ Lvl ${displayLvl}`, vcx, vcy + (r * 0.3));
+                    ctx.fillText(`⭐ Lvl ${displayLvl}`, vcx, vcy + (r * 0.3));
+                }
+                ctx.restore();
+            }
+        } catch (e) {
+            console.error("Error al renderizar celda del jugador:", e);
+            // Asegurar que el contexto se restaure incluso en caso de error
+            try { ctx.restore(); } catch(e2) {}
         }
     }
 };

@@ -289,7 +289,7 @@
             { id: 'icon_cat_coins', type: 'coin' }, { id: 'icon_cat_dna', type: 'dna' }, { id: 'icon_cat_evo', type: 'dna' },
             { id: 'icon_split', type: 'split' }, { id: 'icon_eject', type: 'eject' },
             { id: 'icon_pause', type: 'pause' }, { id: 'icon_lb_toggle', type: 'lb_toggle' },
-            { id: 'icon_emote', type: 'emote' }
+            { id: 'icon_emote', type: 'emote' }, { id: 'icon_social', type: 'global' }
         ];
 
         if (!window.VisualEffects) {
@@ -305,16 +305,17 @@
             try {
                 const canvas = document.createElement('canvas');
                 const isHud = icon.id.includes('hud') || icon.id.includes('shop');
-                const size = isHud ? 20 : 28;
+                // Tamaños reducidos para los iconos procedimentales
+                const size = isHud ? 18 : 22;
 
                 canvas.width = size * 2; canvas.height = size * 2;
                 canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
                 const ctx = canvas.getContext('2d');
                 ctx.scale(2, 2);
 
-                if (icon.type === 'coin') window.VisualEffects.drawSlipCoin(ctx, size/2, size/2, size * 0.45);
-                else if (icon.type === 'dna') window.VisualEffects.drawDNA(ctx, size/2, size/2, size * 0.45);
-                else window.VisualEffects.drawUIIcon(ctx, size/2, size/2, size * 0.45, icon.type);
+                if (icon.type === 'coin') window.VisualEffects.drawSlipCoin(ctx, size/2, size/2, size * 0.4);
+                else if (icon.type === 'dna') window.VisualEffects.drawDNA(ctx, size/2, size/2, size * 0.4);
+                else window.VisualEffects.drawUIIcon(ctx, size/2, size/2, size * 0.4, icon.type);
 
                 el.innerHTML = '';
                 el.appendChild(canvas);
@@ -341,8 +342,9 @@
 
                     if (lowPath.includes('gratis') || lowPath.includes('free')) type = 'free';
                     else if (lowPath.includes('nivel') || lowPath.includes('level')) type = 'tactical';
-                    else if (lowPath.includes('exclusive')) type = 'exclusive';
-                    else if (lowPath.includes('extras')) type = 'aesthetic';
+                    else if (lowPath.includes('exclusiv') || lowPath.includes('especial')) type = 'exclusive';
+                    else if (lowPath.includes('extras') || lowPath.includes('aesthetic')) type = 'aesthetic';
+                    else type = 'premium';
 
                     this.tryLoadSkin("", fullPath, type);
                 });
@@ -359,12 +361,32 @@
             { path: 'ui/images/skins exclusivas/', type: 'exclusive' }
         ];
 
+        // Nombres conocidos para asegurar carga en fallback (PC/Browser)
+        // NOTA: En la App de Android las skins se cargan automáticamente desde las carpetas.
+        const knownFiles = {
+            'tactical': ['Goat', 'Mago', 'Bianc', 'Jabali', 'Sss-00', 'Sss-01', 'Zombie', 'Chimuelo', 'Diablito', 'Hallowen', 'Pez Gota', 'Mr Diablo', 'Dios Egipcio', 'Super Espada', 'Toro Enojado', 'Pulpo Diabolico', 'Tiburon Guerrero', 'Payaso Siniestro'],
+            'free': ['boom', 'Deky', 'Dumm', 'Aguila', 'Fresita', 'Pikachu', 'Scorpio', 'Mr pollo', 'Had and dock'],
+            'premium': ['SSJ4', 'Gouth', 'Misha', 'Pulpo', 'Tigre', 'Dragon', 'IceGod', 'Ninja', 'Sharin', 'Sirius', 'Demoler', 'DEMONIO', 'GOD DOG', 'Kong x1', 'Mr Duck', 'Sumishi', 'Gang DEE', 'Mr Robot', 'DemonSpid', 'ItachiGOD', 'Ciber Dino', 'DEMON OVER', 'Hielo Seco', 'Simon Fire', 'Pulpo Neon', 'Tigre Demon', 'Mexico Lindo', 'Ninja Oculto', 'Micky Tumbado', 'Veneno Mortal', 'Dragon Maldito', 'Dragon Obscuro', 'Demonio del mal', 'Kakashi Enojado', 'Venenoso Mortal', 'Fantasma del mal', 'Muerte Del Ninja', 'Lobo Del Infierno', 'Aguila de la muerte', 'Caballo de la muerte', 'Ninja de las sombras', 'Pulpo Del Purgatorio'],
+            'exclusive': ['Rey Hongo', 'Tentation Gang', 'General Bionico']
+        };
+
         folders.forEach(folder => {
-            for (let i = 1; i <= 30; i++) {
+            // Intentar cargar archivos conocidos para esta categoría
+            if (knownFiles[folder.type]) {
+                knownFiles[folder.type].forEach(name => {
+                    ['.png', '.jpg', '.webp', '.jpeg'].forEach(ext => {
+                        this.tryLoadSkin(folder.path, name + ext, folder.type);
+                    });
+                });
+            }
+
+            // Escaneo genérico por número
+            for (let i = 1; i <= 40; i++) {
                 const extensions = ['.png', '.jpg', '.webp', '.jpeg'];
                 extensions.forEach(ext => {
                     this.tryLoadSkin(folder.path, `skin (${i})${ext}`, folder.type);
                     this.tryLoadSkin(folder.path, `skin-${i}${ext}`, folder.type);
+                    this.tryLoadSkin(folder.path, `${i}${ext}`, folder.type);
                     if (folder.type === 'free') this.tryLoadSkin(folder.path, `Free (${i})${ext}`, folder.type);
                     if (folder.type === 'tactical') this.tryLoadSkin(folder.path, `Por Nivel (${i})${ext}`, folder.type);
                     if (folder.type === 'premium') this.tryLoadSkin(folder.path, `Premium (${i})${ext}`, folder.type);
@@ -423,6 +445,7 @@
             url: img.src,
             price: config.price,
             level: config.level,
+            category: type,
             exclusive: type === 'exclusive',
             req: config.req || "",
             rarity: config.rarity
@@ -434,9 +457,11 @@
             this.renderSkinList();
         }
 
-        // Seleccionar la primera skin si no hay ninguna
+        // Seleccionar la primera skin si no hay ninguna O actualizar si es la actual que acaba de cargar
         if (!this.currentSkin) {
             this.currentSkin = id;
+            this.updateMenuUI();
+        } else if (this.currentSkin === id) {
             this.updateMenuUI();
         }
     },
@@ -474,20 +499,26 @@
     },
 
     calibrateEconomy(analysis, type, id = "") {
-        let price = 0, level = 0, rarity = 'COMÚN', name = "NEON GRID";
+        let price = 0, level = 0, rarity = 'COMMON', name = "NEON GRID";
         const complexity = (analysis.brightness * 0.3) + (analysis.colorVariety * 2) + (analysis.detailDensity * 50);
 
         const lowId = id.toLowerCase();
 
         if (type === 'premium') {
             price = 500 + Math.floor(Math.random() * 9000);
-            rarity = complexity > 80 ? 'ÉPICA' : 'RARE';
+            rarity = complexity > 80 ? 'EPIC' : 'RARE';
+        } else if (type === 'exclusive') {
+            price = 30000;
+            rarity = 'EXCLUSIVE';
         } else if (type === 'tactical') {
-            level = 2 + Math.floor(Math.random() * 48);
-            rarity = level > 25 ? 'ÉPICA' : 'COMÚN';
+            // Determinismo basado en el ID para que el nivel no cambie al recargar
+            let hash = 0;
+            for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i);
+            level = 2 + Math.abs(hash % 48);
+            rarity = level > 25 ? 'EPIC' : 'COMMON';
         } else {
             price = 0;
-            rarity = 'COMÚN';
+            rarity = 'COMMON';
         }
 
         // --- SISTEMA DE NOMBRES BASADO EN ARCHIVO (Para todas las categorías) ---
@@ -542,50 +573,102 @@
     },
 
     renderSkinList() {
-        const grid = document.getElementById('skinGrid'); if (!grid) return; grid.innerHTML = '';
+        const grid = document.getElementById('skinGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
         const userId = this.user ? this.user.id : 'guest';
-        let purchased = JSON.parse(localStorage.getItem(`purchasedSkins_${userId}`) || "[]"), prog = JSON.parse(localStorage.getItem('slip_prog') || "{\"lvl\":1}");
+        let purchased = [];
+        try {
+            purchased = JSON.parse(localStorage.getItem(`purchasedSkins_${userId}`) || "[]");
+        } catch(e) { purchased = []; }
 
-        const filtered = Object.keys(this.skins).filter(k => {
-            const s = this.skins[k];
-            const lowKey = k.toLowerCase();
+        let prog = { lvl: 1 };
+        try {
+            const savedProg = localStorage.getItem('slip_prog');
+            if (savedProg) prog = JSON.parse(savedProg);
+        } catch(e) { prog = { lvl: 1 }; }
 
-            // FILTRO BASADO EN LA RUTA NORMALIZADA (Identifica la carpeta de origen)
-            if (this.currentSkinFilter === 'premium') {
-                return lowKey.includes('slip coins') && !lowKey.includes('exclusive');
+        const currentFilter = this.currentSkinFilter || 'premium';
+
+        const filteredKeys = Object.keys(this.skins).filter(key => {
+            const s = this.skins[key];
+            if (!s) return false;
+            const lowKey = key.toLowerCase();
+
+            // Identificar si es exclusiva (por tipo o por nombre de archivo)
+            const isExclusive = s.category === 'exclusive' || s.exclusive || lowKey.includes('exclusivas') || lowKey.includes('exclusive');
+
+            if (currentFilter === 'exclusive') {
+                return isExclusive;
             }
-            if (this.currentSkinFilter === 'level') {
-                return lowKey.includes('por nivel') && !lowKey.includes('exclusive');
+
+            // Si es exclusiva, no mostrar en otras pestañas
+            if (isExclusive) return false;
+
+            if (currentFilter === 'premium') {
+                return s.category === 'premium' || lowKey.includes('slip coins') || s.price > 0;
             }
-            if (this.currentSkinFilter === 'free') {
-                return lowKey.includes('skins gratis') && !lowKey.includes('exclusive');
+            if (currentFilter === 'level') {
+                return s.category === 'tactical' || lowKey.includes('nivel') || lowKey.includes('level') || s.level > 0;
             }
-            if (this.currentSkinFilter === 'exclusive') {
-                return s.exclusive || lowKey.includes('exclusivas') || lowKey.includes('exclusive');
+            if (currentFilter === 'free') {
+                return s.category === 'free' || s.category === 'aesthetic' || lowKey.includes('gratis') || lowKey.includes('free') || (s.price === 0 && s.level === 0);
             }
             return false;
         });
-        filtered.forEach(key => {
-            const s = this.skins[key], isSelected = this.currentSkin === key, locked = s.level > prog.lvl;
-            const isFree = (s.price === 0 && !s.level && !s.exclusive) || (s.price === 0 && !s.exclusive && !locked);
+
+        if (filteredKeys.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; padding: 40px; text-align: center; color: #94a3b8; font-weight: 900; text-transform: uppercase;">No hay aspectos disponibles</div>';
+            return;
+        }
+
+        filteredKeys.forEach(key => {
+            const s = this.skins[key];
+            const isSelected = (this.currentSkin === key);
+            const locked = (s.level > prog.lvl);
+            const isFree = (s.price === 0 && !s.level && !s.exclusive);
             const owned = purchased.includes(key) || isFree;
-            const card = document.createElement('div'); card.className = `skin-card ${isSelected ? 'active' : ''} rarity-${s.rarity.toLowerCase()}`;
 
-            let btnTxt = isSelected ? Localization.get("equipped") : (owned ? Localization.get("select") : (locked ? `NIVEL ${s.level}` : (s.exclusive ? "BLOQUEADO" : `💰 ${s.price}`)));
-            if (isFree && !purchased.includes(key) && !isSelected) btnTxt = Localization.get("get");
+            let btnTxt = "";
+            let btnCol = "#f59e0b";
 
-            let btnCol = isSelected ? "#22c55e" : (owned ? "#3b82f6" : (locked ? "#475569" : (s.exclusive ? "#475569" : "#f59e0b")));
+            if (isSelected) {
+                btnTxt = Localization.get("equipped");
+                btnCol = "#22c55e";
+            } else if (owned) {
+                btnTxt = Localization.get("select");
+                btnCol = "#3b82f6";
+            } else if (locked) {
+                btnTxt = "NIVEL " + s.level;
+                btnCol = "#475569";
+            } else {
+                btnTxt = "💰 " + s.price;
+                btnCol = "#f59e0b";
+            }
+
+            if (isFree && !owned && !isSelected) btnTxt = Localization.get("get");
+
+            const rarityClass = (s.rarity || 'COMMON').toLowerCase();
+            const card = document.createElement('div');
+            card.className = `skin-card ${isSelected ? 'active' : ''} rarity-${rarityClass}`;
 
             card.innerHTML = `
-                <div class="rarity-tag ${s.rarity.toLowerCase()}">${s.rarity}</div>
-                <div class="skin-img-container" style="width:90px; height:90px; border-radius:50%; overflow:hidden; border:3px solid ${isSelected ? '#3b82f6' : 'rgba(255,255,255,0.1)'}; margin-bottom:12px; background:rgba(0,0,0,0.3); position:relative;">
+                <div class="rarity-tag ${rarityClass}">${s.rarity || 'COMMON'}</div>
+                <div class="skin-img-container ${s.exclusive ? 'exclusive-skin-outline' : ''}" style="width:90px; height:90px; border-radius:50%; overflow:hidden; border:3px solid ${isSelected ? '#3b82f6' : 'rgba(255,255,255,0.1)'}; margin-bottom:12px; background:rgba(0,0,0,0.3); position:relative;">
                     ${key.startsWith('procedural_') ? `<canvas id="cv_${key}" width="90" height="90" style="width:100%; height:100%;"></canvas>` : `<img src="${s.url}" style="width:100%; height:100%; object-fit:cover;">`}
                     ${locked ? `<div class="skin-lock-overlay">🔒</div>` : ''}
                 </div>
                 <div style="font-weight:900; font-size:0.7rem; color:#fff; text-transform:uppercase; margin-bottom:10px; text-align:center;">${s.name}</div>
                 <button class="item-price-btn" style="background:${btnCol};">${btnTxt}</button>
             `;
-            if (key.startsWith('procedural_')) setTimeout(() => { const cv = document.getElementById(`cv_${key}`); if(cv) window.VisualEffects.drawProceduralSkin(cv.getContext('2d'), 45, 45, 40, parseInt(key.split('_')[1])); }, 0);
+
+            if (key.startsWith('procedural_')) {
+                setTimeout(() => {
+                    const cv = document.getElementById(`cv_${key}`);
+                    if (cv && window.VisualEffects) window.VisualEffects.drawProceduralSkin(cv.getContext('2d'), 45, 45, 40, parseInt(key.split('_')[1]));
+                }, 0);
+            }
 
             card.onclick = () => {
                 if (isSelected) return;
@@ -597,7 +680,7 @@
                         this.updateMenuUI();
                         this.renderSkinList();
                     }
-                } else if (locked || s.exclusive) {
+                } else if (locked) {
                     this.showAlert("PROTOCOLO BLOQUEADO", s.req || `Alcanza el nivel ${s.level} para desbloquear este aspecto.`, "🔒");
                 } else {
                     this.buySkin(key);
@@ -1113,7 +1196,13 @@
         } catch (e) { console.error("Error al cargar user_data", e); this.user = null; }
 
         if (!this.user || !this.user.name) {
-            this.user = { id: 'guest', name: localStorage.getItem('guest_name') || "Invitado", picture: "ui/images/skins gratis/Free (1).png" };
+            this.user = { id: 'guest', name: localStorage.getItem('guest_name') || "Invitado", picture: "ui/images/skins gratis/boom.png" };
+        }
+
+        // Recuperar skin seleccionada
+        const savedSkin = localStorage.getItem('selectedSkin');
+        if (savedSkin && savedSkin !== "undefined") {
+            this.currentSkin = savedSkin;
         }
 
         // Validación de skins compradas
@@ -1121,10 +1210,10 @@
         try {
             const pSkins = localStorage.getItem(`purchasedSkins_${userId}`);
             if (!pSkins || pSkins === "undefined" || pSkins === "null") {
-                localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(["ui/images/skins gratis/Free (1).png"]));
+                localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(["ui/images/skins gratis/boom.png"]));
             }
         } catch(e) {
-            localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(["ui/images/skins gratis/Free (1).png"]));
+            localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(["ui/images/skins gratis/boom.png"]));
         }
 
         document.getElementById('userNameDisplay').innerText = this.user.name;
@@ -1174,8 +1263,14 @@
     },
 
     syncSkinImages() {
-        if (!this.currentSkin) return;
-        const s = this.skins[this.currentSkin] || { id: this.currentSkin, url: 'ui/images/skins gratis/Free (1).png' };
+        if (!this.currentSkin) {
+            // Intentar auto-seleccionar la primera disponible si no hay ninguna
+            const keys = Object.keys(this.skins);
+            if (keys.length > 0) this.currentSkin = keys[0];
+            else return;
+        }
+
+        const s = this.skins[this.currentSkin] || { id: this.currentSkin, url: 'ui/images/skins gratis/boom.png' };
         let finalUrl = s.url;
         if (this.currentSkin.startsWith('procedural_')) {
             const seed = parseInt(this.currentSkin.split('_')[1]) || 1000, cv = document.createElement('canvas'); cv.width = 150; cv.height = 150;

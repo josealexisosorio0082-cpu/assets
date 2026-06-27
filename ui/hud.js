@@ -5,12 +5,10 @@
 
     init() {
         const toggle = document.getElementById('leaderboardToggle');
-        // ... (resto del init)
-
         if (toggle) {
             // Usar touchstart para respuesta inmediata en móviles
             const handleToggle = (e) => {
-                e.preventDefault();
+                if (e.cancelable) e.preventDefault();
                 e.stopPropagation();
                 this.isLeaderboardVisible = !this.isLeaderboardVisible;
                 this.updateLeaderboardVisibility();
@@ -56,8 +54,8 @@
         scoreEl.innerText = mass;
 
         // MÓDULO 3: Text-shadow neón que coincide con el color de la célula
-        const playerColor = Player.cells[0] ? Player.cells[0].color : '#38bdf8';
-        scoreEl.style.textShadow = `0 0 15px ${playerColor}`;
+        const playerColor = (Player.cells && Player.cells[0]) ? Player.cells[0].color : '#38bdf8';
+        scoreEl.style.textShadow = `0 0 12px ${playerColor}`;
     },
 
     render() {
@@ -92,8 +90,8 @@
         const container = document.getElementById('killAnnouncer');
         if (!container) return;
 
-        container.innerHTML = `<div class="announcement" style="color: ${color}; text-shadow: 0 0 20px ${color}66;">
-            ${msg}<br><small>+${xp} XP EXTRA</small>
+        container.innerHTML = `<div class="announcement" style="color: ${color}; text-shadow: 0 0 20px ${color}66; font-size: 1.8rem;">
+            ${msg}<br><small style="font-size: 0.8rem;">+${xp} XP EXTRA</small>
         </div>`;
         container.classList.remove('hidden');
 
