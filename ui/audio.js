@@ -1,149 +1,314 @@
 /**
- * AudioManager - Cyber-Audio Manager Profesional para Slip Game
- * -----------------------------------------------------------
- * Arquitectura de canales separados (BGM/SFX), Audio Pooling,
- * variación de pitch aleatoria y persistencia de configuración.
- * Optimizado para WebView (60 FPS).
+ * CyberAudioManager - Motor de Síntesis Procedural AAA para Slip Game
+ * ------------------------------------------------------------------
+ * Diseñado por Alexis Osorio. Implementa algoritmos de síntesis para SFX
+ * de alta fidelidad sin archivos externos, optimizando latencia y memoria.
  */
 
-class AudioManager {
+class CyberAudioManager {
     constructor() {
-        // Estado inicial de persistencia
+        this.ctx = null;
+        this.masterGain = null;
         this.isMuted = localStorage.getItem('slip_game_muted') === 'true';
-        this.bgmVolume = 0.4;
-        this.sfxVolume = 0.6;
+        this.bgmVolume = 0.35;
+        this.sfxVolume = 0.5;
 
-        // Canales y Pools
+        // Canal de música (BGM) - Reservado para archivos externos
         this.bgm = null;
-        this.sfxPools = {};
-        this.poolSize = 6; // Instancias por sonido de alta frecuencia
+        this.bgmPath = 'audio/bgm/main_theme.mp3'; // El desarrollador puede cambiar esto
 
-        // Mapeo de archivos (Asumidos en assets/audio/)
-        this.sounds = {
-            'UI_CLICK': 'audio/sfx/ui_click.mp3',
-            'COIN_BUY': 'audio/sfx/coin_buy.mp3',
-            'PLAYER_DIVIDE': 'audio/sfx/player_divide.mp3',
-            'GAME_OVER': 'audio/sfx/game_over.mp3',
-            'EAT': 'audio/sfx/eat_node.mp3'
-        };
-
-        this.bgmPath = 'audio/bgm/main_theme.mp3';
-
-        this.init();
+        this.initialized = false;
+        this._setupInteractionListeners();
     }
 
     /**
-     * Inicializa el sistema, pre-carga el pool y configura el BGM.
+     * Inicialización diferida del AudioContext por políticas de seguridad del navegador/WebView.
      */
     init() {
-        console.log("AudioManager: Iniciando Cyber-Audio Manager...");
+        if (this.initialized) return;
 
-        // Pre-carga de SFX Pools (Anti-Lag)
-        for (const [key, path] of Object.entries(this.sounds)) {
-            this.sfxPools[key] = [];
-            // Los sonidos más frecuentes tienen pools más grandes
-            const count = (key === 'EAT' || key === 'UI_CLICK') ? this.poolSize : 2;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.connect(this.ctx.destination);
+            this.masterGain.gain.value = this.isMuted ? 0 : 1;
 
-            for (let i = 0; i < count; i++) {
-                const audio = new Audio(path);
-                audio.preload = 'auto';
-                this.sfxPools[key].push(audio);
-            }
+            this.initialized = true;
+            console.log("CyberAudioManager: Motor de síntesis procedural activo.");
+
+            // Inicializar BGM si existe el archivo
+            this._initBGM();
+        } catch (e) {
+            console.error("CyberAudioManager: Error al inicializar Web Audio API.", e);
         }
+    }
 
-        // Configuración de BGM
-        this.bgm = new Audio(this.bgmPath);
+    _initBGM() {
+        this.bgm = new Audio();
+        this.bgm.src = this.bgmPath;
         this.bgm.loop = true;
         this.bgm.volume = this.bgmVolume;
-        this.bgm.preload = 'auto';
+        if (!this.isMuted) {
+            this.bgm.play().catch(() => { /* Esperando interacción */ });
+        }
+    }
 
-        // Manejo de interacción de usuario para Auto-Play (Restricción de Browsers)
-        const startOnInteraction = () => {
-            if (!this.isMuted && this.bgm) {
-                this.bgm.play().catch(e => console.warn("Audio: Esperando interacción...", e));
+    _setupInteractionListeners() {
+        const unlock = () => {
+            this.init();
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume();
             }
-            document.removeEventListener('click', startOnInteraction);
-            document.removeEventListener('touchstart', startOnInteraction);
+            document.removeEventListener('click', unlock);
+            document.removeEventListener('touchstart', unlock);
         };
-        document.addEventListener('click', startOnInteraction);
-        document.addEventListener('touchstart', startOnInteraction);
+        document.addEventListener('click', unlock);
+        document.addEventListener('touchstart', unlock);
     }
 
     /**
-     * Reproduce un efecto de sonido del pool.
-     * @param {string} name Identificador del sonido.
-     * @param {boolean} varyPitch Si debe aplicar variación aleatoria (Anti-Fatiga).
+     * 'UI_CLICK' - Clic mecánico sutil y futurista.
      */
-    playSFX(name, varyPitch = false) {
-        if (this.isMuted || !this.sfxPools[name]) return;
+    playClick() {
+        if (!this.initialized || this.isMuted) return;
 
-        // Búsqueda de instancia disponible en el pool
-        const pool = this.sfxPools[name];
-        let audio = pool.find(a => a.paused);
+        const now = this.ctx.currentTime;
 
-        // Si todo el pool está ocupado, forzamos el reinicio de la primera (LIFO simple)
-        if (!audio) audio = pool[0];
+        // Cuerpo del clic (Triangular para suavidad mecánica)
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
 
-        audio.currentTime = 0;
-        audio.volume = this.sfxVolume;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
 
-        if (varyPitch) {
-            // Variación entre 0.92 y 1.08 para calidad premium
-            audio.playbackRate = 0.92 + Math.random() * 0.16;
-        } else {
-            audio.playbackRate = 1.0;
-        }
+        gain.gain.setValueAtTime(0.3 * this.sfxVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
 
-        audio.play().catch(e => {
-            // Silenciamos errores de "User Interacted Needed"
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+
+        // Pulso metálico de alta frecuencia (Ataque rápido)
+        const pulse = this.ctx.createOscillator();
+        const pulseGain = this.ctx.createGain();
+        const pulseFilter = this.ctx.createBiquadFilter();
+
+        pulse.type = 'square';
+        pulse.frequency.setValueAtTime(800, now);
+
+        pulseFilter.type = 'highpass';
+        pulseFilter.frequency.setValueAtTime(2500, now);
+
+        pulseGain.gain.setValueAtTime(0.15 * this.sfxVolume, now);
+        pulseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.02);
+
+        pulse.connect(pulseFilter);
+        pulseFilter.connect(pulseGain);
+        pulseGain.connect(this.masterGain);
+
+        pulse.start(now);
+        pulse.stop(now + 0.03);
+    }
+
+    /**
+     * 'EAT' - "Pop Acústico Hueco". Orgánico y con peso físico.
+     */
+    playEat() {
+        if (!this.initialized || this.isMuted) return;
+
+        const now = this.ctx.currentTime;
+        const pitchMod = 0.92 + Math.random() * 0.16; // Variación aleatoria premium
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(110 * pitchMod, now);
+        osc.frequency.exponentialRampToValueAtTime(45 * pitchMod, now + 0.12);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+        filter.Q.value = 5; // Resonancia para el efecto "hueco"
+
+        gain.gain.setValueAtTime(0.6 * this.sfxVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+
+    /**
+     * 'COIN_BUY / GACHA' - Apertura mecánica + Acorde digital de dopamina.
+     */
+    playBuy() {
+        if (!this.initialized || this.isMuted) return;
+
+        const now = this.ctx.currentTime;
+
+        // 1. Mecanismo abriéndose (Ruido blanco filtrado)
+        const bufferSize = this.ctx.sampleRate * 0.15;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const noiseFilter = this.ctx.createBiquadFilter();
+        const noiseGain = this.ctx.createGain();
+
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(1500, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(500, now + 0.15);
+
+        noiseGain.gain.setValueAtTime(0.25 * this.sfxVolume, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(this.masterGain);
+        noise.start(now);
+
+        // 2. Acorde de Victoria (Intervalos de 3ra y 5ta Mayor)
+        const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (Do Mayor brillante)
+        freqs.forEach((f, i) => {
+            const vOsc = this.ctx.createOscillator();
+            const vGain = this.ctx.createGain();
+            const vFilter = this.ctx.createBiquadFilter();
+
+            vOsc.type = 'sine';
+            vOsc.frequency.value = f;
+
+            vFilter.type = 'lowpass';
+            vFilter.frequency.value = 4000;
+
+            const delay = i * 0.04; // Arpegio rápido para textura
+            vGain.gain.setValueAtTime(0, now + delay);
+            vGain.gain.linearRampToValueAtTime(0.2 * this.sfxVolume, now + delay + 0.05);
+            vGain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.6);
+
+            vOsc.connect(vFilter);
+            vFilter.connect(vGain);
+            vGain.connect(this.masterGain);
+
+            vOsc.start(now + delay);
+            vOsc.stop(now + delay + 0.7);
         });
     }
 
-    // --- Métodos de Conveniencia ---
-    playClick() { this.playSFX('UI_CLICK'); }
-    playBuy() { this.playSFX('COIN_BUY'); }
-    playSplit() { this.playSFX('PLAYER_DIVIDE'); }
-    playEat() { this.playSFX('EAT', true); }
+    /**
+     * 'PLAYER_DIVIDE' - Mini-explosión controlada y pesada.
+     */
+    playSplit() {
+        if (!this.initialized || this.isMuted) return;
 
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(80, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, now);
+        filter.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+        filter.Q.value = 10;
+
+        gain.gain.setValueAtTime(0.7 * this.sfxVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+
+    /**
+     * 'GAME_OVER' - Glitch de desconexión y caída de energía.
+     */
     playGameOver() {
-        this.playSFX('GAME_OVER');
+        if (!this.initialized || this.isMuted) return;
+
+        const now = this.ctx.currentTime;
+        const duration = 1.8;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + duration);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(3000, now);
+        filter.frequency.exponentialRampToValueAtTime(50, now + duration);
+
+        gain.gain.setValueAtTime(0.5 * this.sfxVolume, now);
+        gain.gain.linearRampToValueAtTime(0.1, now + duration);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.1);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + duration + 0.2);
+
         this.fadeOutBGM();
     }
 
     /**
-     * Efecto glitch/descendente de música para Game Over.
+     * Gestión de BGM y estados
      */
     fadeOutBGM() {
         if (!this.bgm) return;
-        let originalVol = this.bgm.volume;
-        const fadeInterval = setInterval(() => {
-            if (this.bgm.volume > 0.05) {
-                this.bgm.volume -= 0.05;
-            } else {
+        const currentVol = this.bgm.volume;
+        const steps = 20;
+        const interval = 1000 / steps;
+        let count = 0;
+
+        const fade = setInterval(() => {
+            count++;
+            this.bgm.volume = Math.max(0, currentVol * (1 - count / steps));
+            if (count >= steps) {
                 this.bgm.pause();
-                this.bgm.volume = originalVol;
-                clearInterval(fadeInterval);
+                this.bgm.volume = this.bgmVolume;
+                clearInterval(fade);
             }
-        }, 150);
+        }, interval);
     }
 
-    /**
-     * Muta/Desmuta el sistema y persiste en LocalStorage.
-     */
     toggleMute() {
         this.isMuted = !this.isMuted;
         localStorage.setItem('slip_game_muted', this.isMuted);
 
-        if (this.isMuted) {
-            if (this.bgm) this.bgm.pause();
-            console.log("Audio: MUTE ON");
-        } else {
-            if (this.bgm) this.bgm.play().catch(()=>{});
-            console.log("Audio: MUTE OFF");
+        if (this.masterGain) {
+            this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 1, this.ctx.currentTime, 0.1);
         }
+
+        if (this.bgm) {
+            if (this.isMuted) this.bgm.pause();
+            else this.bgm.play().catch(() => {});
+        }
+
+        console.log(`AudioManager: ${this.isMuted ? 'MUTE ON' : 'MUTE OFF'}`);
         return this.isMuted;
     }
 }
 
-// Instancia global accesible desde cualquier módulo
-window.AudioManager = new AudioManager();
+// Inyección del Manager en el contexto global
+window.AudioManager = new CyberAudioManager();

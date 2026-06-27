@@ -67,7 +67,6 @@
         if (Player.isPlaying()) {
             if (gameplayUI) {
                 gameplayUI.style.display = 'block';
-                gameplayUI.style.pointerEvents = 'none'; // Importante para que el joystick/botones funcionen
             }
             if (hudTop) hudTop.style.display = 'none';
             this.renderScore();

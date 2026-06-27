@@ -726,12 +726,13 @@ var Engine = {
 const joystick = {
     active:false, activeTouchId: null,
     currentX: 0, currentY: 0,
+    centerX: 0, centerY: 0,
     stick: null,
     container: null
 };
 
 function handleTouchMove(e) {
-    if (!joystick.active || !joystick.container || !window.canvas) return;
+    if (!joystick.active || !joystick.container) return;
     let touch = null;
     for (let i = 0; i < e.touches.length; i++) {
         if (e.touches[i].identifier === joystick.activeTouchId) {
@@ -741,22 +742,10 @@ function handleTouchMove(e) {
     }
     if (!touch) return;
 
-    // MÓDULO 1: CÁLCULO RELATIVO AL CANVAS REAL (Corrección de HUD 55px)
-    const rect = joystick.container.getBoundingClientRect();
-    const canvasRect = window.canvas.getBoundingClientRect();
-
-    // Coordenadas del touch relativas al canvas
-    const touchCanvasX = touch.clientX - canvasRect.left;
-    const touchCanvasY = touch.clientY - canvasRect.top;
-
-    // Centro del joystick relativo al canvas
-    const centerCanvasX = (rect.left + rect.width / 2) - canvasRect.left;
-    const centerCanvasY = (rect.top + rect.height / 2) - canvasRect.top;
-
-    const dx = touchCanvasX - centerCanvasX;
-    const dy = touchCanvasY - centerCanvasY;
+    const dx = touch.clientX - joystick.centerX;
+    const dy = touch.clientY - joystick.centerY;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const maxDist = rect.width / 2;
+    const maxDist = 65;
 
     const angle = Math.atan2(dy, dx);
     const clampedDist = Math.min(dist, maxDist);
@@ -764,7 +753,7 @@ function handleTouchMove(e) {
     joystick.currentX = Math.cos(angle) * clampedDist;
     joystick.currentY = Math.sin(angle) * clampedDist;
 
-    // Normalización de entrada para el jugador (Fijado a 150px de radio virtual)
+    // Normalización de entrada para el jugador
     window.mouse.targetX = (window.innerWidth / 2) + (joystick.currentX / maxDist) * 150;
     window.mouse.targetY = (window.innerHeight / 2) + (joystick.currentY / maxDist) * 150;
 }
@@ -775,51 +764,66 @@ function initControls() {
         joystick.container = document.getElementById('joystickContainer');
         const gameplayUI = document.getElementById('gameplayUI');
 
-        if (gameplayUI) {
-            gameplayUI.addEventListener('touchstart', function(e) {
-                if (Engine.isPaused || Engine.controlMode !== 'touch') return;
-                // MÓDULO 3: Tracking de Touch ID para fijación de joystick
-                const touch = e.touches[e.touches.length - 1];
-                if (touch.clientX < window.innerWidth * 0.5) {
+        // Listener global para el joystick dinámico (Resuelve el bug de pointer-events: none)
+        window.addEventListener('touchstart', function(e) {
+            // No activar si el juego no ha empezado, está pausado o no es modo touch
+            if (!Engine.isStarted || Engine.isPaused || Engine.controlMode !== 'touch') return;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                // Solo activar si es en la mitad izquierda y no hay joystick activo
+                if (touch.clientX < window.innerWidth * 0.5 && !joystick.active) {
+                    // Evitar activar joystick si se toca el botón de pausa o el HUD interactivo
+                    if (e.target.closest('#pauseBtn') || e.target.closest('#leaderboardToggle')) return;
+
                     joystick.active = true;
                     joystick.activeTouchId = touch.identifier;
-                    joystick.container.style.left = (touch.clientX - 65) + 'px';
-                    joystick.container.style.top = (touch.clientY - 65) + 'px';
-                    joystick.container.style.bottom = 'auto';
-                    handleTouchMove(e);
-                }
-            }, { passive: false });
+                    joystick.centerX = touch.clientX;
+                    joystick.centerY = touch.clientY;
 
-            gameplayUI.style.pointerEvents = 'auto';
-        }
+                    joystick.container.style.display = 'block';
+                    joystick.container.style.left = touch.clientX + 'px';
+                    joystick.container.style.top = touch.clientY + 'px';
+
+                    joystick.currentX = 0;
+                    joystick.currentY = 0;
+                    handleTouchMove(e);
+                    break;
+                }
+            }
+        }, { passive: false });
 
         window.addEventListener('touchmove', function(e) {
             if (joystick.active) {
-                e.preventDefault();
+                // PreventDefault es vital para evitar scroll/zoom accidental en Android
+                if (e.cancelable) e.preventDefault();
                 handleTouchMove(e);
             }
         }, { passive: false });
 
-        window.addEventListener('touchend', function(e) {
-            // MÓDULO 1: PARADA INSTANTÁNEA (Anti-Drift)
-            let stillActive = false;
-            for(let i=0; i<e.touches.length; i++) {
-                if(e.touches[i].identifier === joystick.activeTouchId) stillActive = true;
-            }
-            if(!stillActive) {
-                joystick.active = false;
-                joystick.activeTouchId = null;
-                joystick.currentX = 0;
-                joystick.currentY = 0;
-                window.mouse.targetX = window.innerWidth / 2;
-                window.mouse.targetY = window.innerHeight / 2;
+        const endHandler = function(e) {
+            if (!joystick.active) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === joystick.activeTouchId) {
+                    joystick.active = false;
+                    joystick.activeTouchId = null;
+                    joystick.container.style.display = 'none';
+                    joystick.currentX = 0;
+                    joystick.currentY = 0;
+                    window.mouse.targetX = window.innerWidth / 2;
+                    window.mouse.targetY = window.innerHeight / 2;
 
-                // Forzar frenado en Player
-                if (window.Player && window.Player.cells) {
-                    window.Player.cells.forEach(c => { c.vx = 0; c.vy = 0; });
+                    // Frenado instantáneo (Anti-drift)
+                    if (window.Player && window.Player.cells) {
+                        window.Player.cells.forEach(c => { c.vx = 0; c.vy = 0; });
+                    }
+                    break;
                 }
             }
-        });
+        };
+
+        window.addEventListener('touchend', endHandler);
+        window.addEventListener('touchcancel', endHandler);
 
         var btnSplit = document.getElementById('btnSplit');
         if (btnSplit) btnSplit.addEventListener('touchstart', function(e) { if (!Engine.isPaused) { e.preventDefault(); Player.split(); } });
