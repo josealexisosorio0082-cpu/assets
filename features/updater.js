@@ -1,12 +1,10 @@
 /**
  * Slip Game - Slip Nexus Core (Updater & Retention Engine)
  * @author Alexis Osorio
- * @version 1.6.0
+ * @version 1.7.0 [BLINDAJE DEFINITIVO]
  */
 
-// Sincronización 100% Automática vía GitHub API
-window.CURRENT_BUILD_DATE = "2026-06-26T00:00:00Z";
-const COMMITS_URL = "https://api.github.com/repos/josealexisosorio0082-cpu/slip-game/commits?per_page=1";
+const COMMITS_URL = "https://api.github.com/repos/josealexisosorio0082-cpu/Slip_Game/commits?per_page=1";
 
 const Updater = {
     isUpdateFound: false,
@@ -35,12 +33,21 @@ const Updater = {
         if (this.isChecking) return;
         this.isChecking = true;
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
         try {
+            const localTimestamp = parseInt(localStorage.getItem("LAST_DEPLOY_TIMESTAMP") || "0");
+
             // ELIMINACIÓN DE CACHÉ DE PETICIÓN (ANTI-STALLING)
             const antiCacheUrl = `${COMMITS_URL}&_nocache=${Date.now()}`;
+
             const response = await fetch(antiCacheUrl, {
-                headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+                headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) throw new Error("GitHub API Offline");
 
@@ -52,22 +59,28 @@ const Updater = {
 
             // CONVERSIÓN DE FECHAS A NÚMEROS (PARSEO OBLIGATORIO)
             const remoteTimestamp = new Date(remoteDate).getTime();
-            const localBuildTimestamp = new Date(window.CURRENT_BUILD_DATE).getTime();
-            const lastDeployTimestamp = parseInt(localStorage.getItem("LAST_DEPLOY_TIMESTAMP") || 0);
 
-            // LÓGICA DE DETECCIÓN MATEMÁTICA INFALIBLE
-            const currentLocalTimestamp = Math.max(localBuildTimestamp, lastDeployTimestamp);
+            // CONSOLE.LOGS DE DIAGNÓSTICO
+            console.log(`[Nexus Debug] Local TS: ${localTimestamp} | Remote TS: ${remoteTimestamp}`);
 
-            // CONSOLE.LOGS DE DIAGNÓSTICO (MODO DEBUG)
-            console.log(`[Nexus Debug] Local Timestamp: ${currentLocalTimestamp} | Remote Timestamp: ${remoteTimestamp}`);
+            // LÓGICA DE BLINDAJE: PRIMERA EJECUCIÓN
+            if (localTimestamp === 0) {
+                console.log("[Updater] Primera ejecución detectada. Sincronizando timestamp base.");
+                localStorage.setItem("LAST_DEPLOY_TIMESTAMP", remoteTimestamp);
+                return;
+            }
 
-            if (remoteTimestamp > currentLocalTimestamp) {
+            // COMPARACIÓN NUMÉRICA IMPERMEABLE
+            if (remoteTimestamp > localTimestamp) {
                 console.log("[Updater] Nueva implementación detectada en el repositorio.");
                 this.isUpdateFound = true;
                 this.showUpdateModal(remoteTimestamp, commitMessage);
+            } else {
+                console.log("[Updater] El sistema ya está en la última versión.");
             }
         } catch (error) {
-            console.warn("[Updater] Fallo en sincronización:", error.message);
+            console.warn("[Updater] Fallo en sincronización (Omitiendo verificación):", error.message);
+            // Si falla por conexión o timeout, permitimos el flujo normal local.
         } finally {
             this.isChecking = false;
         }
@@ -104,7 +117,7 @@ const Updater = {
         document.body.appendChild(modal);
 
         document.getElementById('btnInstallUpdate').onclick = () => {
-            // ACTUALIZACIÓN CORRECTA DEL STORAGE
+            // ASEGURAR EL FLUJO: PRIMERO GUARDAR TS, LUEGO RELOAD
             localStorage.setItem("LAST_DEPLOY_TIMESTAMP", remoteTimestamp);
             window.location.reload(true);
         };
@@ -160,7 +173,7 @@ const Updater = {
 };
 
 /**
- * MOTOR DE NOTIFICACIONES LOCALES (RETENCIÓN Y DOPAMINA)
+ * MOTOR DE NOTIFICACIONES LOCALES (PRESERVADO)
  */
 const NotificationEngine = {
     inactivityTimers: [],
