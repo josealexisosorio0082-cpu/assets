@@ -133,45 +133,56 @@
 
 <!-- Modal Perfil (MÓDULO 4) -->
 <div id="profileModal" class="ui-screen">
-    <div class="modal-content profile-modal-content">
+    <div class="modal-content profile-modal-compact">
         <div id="closeProfile" class="back-btn-circle">✖</div>
-        <h2 class="modal-title">PROTOCOL PERFIL</h2>
 
-        <div class="avatar-main-container">
-            <img id="profileAvatarLarge" src="ui/images/skins gratis/Free (1).png" class="large-avatar">
-            <div class="edit-badge">✎</div>
-        </div>
-
-        <div class="input-group">
-            <span class="input-label">Identificador de Usuario</span>
-            <input type="text" id="profileNameInput" class="pretty-input" placeholder="Nombre..." maxlength="15">
-        </div>
-
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-value" id="statMaxMass">0</div>
-                <div class="stat-label">MAX MASA</div>
+        <div class="profile-header-new">
+            <div class="header-left">
+                <div id="profileRankBadge" class="rank-emblem noob"></div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statTotalGames">0</div>
-                <div class="stat-label">PARTIDAS</div>
+            <div class="header-center">
+                <div class="avatar-container-new">
+                    <img id="profileAvatarLarge" src="ui/images/skins gratis/Free (1).png" class="avatar-img-new">
+                    <div class="edit-badge-new">✎</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statMaxSurvived">0s</div>
-                <div class="stat-label">SURVIVE</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statTotalEaten">0</div>
-                <div class="stat-label">KILLS</div>
+            <div class="header-right">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                    <div id="profileRankName" class="rank-label-new">VIRUS</div>
+                    <div id="profileLevelTag" style="font-size: 0.6rem; background: rgba(139, 92, 246, 0.2); padding: 2px 6px; border-radius: 4px; color: #a78bfa; font-weight: 950; border: 1px solid rgba(139, 92, 246, 0.3);">LVL 1</div>
+                </div>
+                <input type="text" id="profileNameInput" class="name-input-new" placeholder="Nombre..." maxlength="15">
             </div>
         </div>
 
-        <div class="stats-summary-box">
-            <span class="summary-label">CREDITOS DE PLASMA</span>
-            <div id="statCoins" class="summary-value">0</div>
+        <div class="stats-grid-compact">
+            <div class="stat-box-new">
+                <span class="stat-val-new" id="statMaxMass">0</span>
+                <span class="stat-lbl-new">MAX MASA</span>
+            </div>
+            <div class="stat-box-new">
+                <span class="stat-val-new" id="statTotalGames">0</span>
+                <span class="stat-lbl-new">PARTIDAS</span>
+            </div>
+            <div class="stat-box-new">
+                <span class="stat-val-new" id="statMaxSurvived">0s</span>
+                <span class="stat-lbl-new">SURVIVE</span>
+            </div>
+            <div class="stat-box-new">
+                <span class="stat-val-new" id="statTotalEaten">0</span>
+                <span class="stat-lbl-new">KILLS</span>
+            </div>
         </div>
 
-        <button id="goToSkinsFromProfile" class="btn-blue">PERSONALIZAR AVATAR</button>
+        <div class="plasma-credits-compact">
+            <div class="plasma-icon-small"></div>
+            <div class="plasma-info-new">
+                <span class="plasma-lbl-new">CRÉDITOS DE PLASMA</span>
+                <span id="statCoins" class="plasma-val-new">0</span>
+            </div>
+        </div>
+
+        <button id="goToSkinsFromProfile" class="btn-blue-compact">PERSONALIZAR AVATAR</button>
     </div>
 </div>
 

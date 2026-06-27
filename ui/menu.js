@@ -860,8 +860,9 @@
     openProfile() {
         this.switchState(this.STATES.PERFIL);
         const p = window.progression || { passLevel: 1, slipXP: 0 };
-        const modalTitle = document.querySelector('#profileModal .modal-title');
-        if (modalTitle) modalTitle.innerHTML = `Mi Perfil <small style="font-size: 0.8rem; opacity: 0.6;">(Lvl ${p.passLevel})</small>`;
+
+        const lvlTag = document.getElementById('profileLevelTag');
+        if (lvlTag) lvlTag.innerText = `LVL ${p.passLevel}`;
 
         // Actualización de estadísticas con valores reales
         const getStat = (key) => localStorage.getItem(key) || 0;
@@ -920,17 +921,23 @@
         const p = window.progression || { passLevel: data.lvl, slipXP: data.xp, rankPoints: 0 };
         const rank = this.getRankInfo(p.rankPoints || 0);
 
-        const rBadge = document.getElementById('rankBadge'), rName = document.getElementById('rankNameDisplay');
-        if (rBadge) {
-            rBadge.className = `rank-emblem ${rank.class}`;
-            rBadge.innerHTML = `<span class="rank-tag-text">${rank.tag}</span>`;
-            rBadge.style.borderColor = rank.color;
-            rBadge.style.boxShadow = `0 0 15px ${rank.color}44`;
-        }
+        // Update all rank badges and labels
+        ['rankBadge', 'profileRankBadge'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.className = `rank-emblem ${rank.class}`;
+                el.innerHTML = `<span class="rank-tag-text">${rank.tag}</span>`;
+                el.style.borderColor = rank.color;
+                el.style.boxShadow = `0 0 15px ${rank.color}44`;
+            }
+        });
 
-        if (rName) {
-            rName.innerHTML = `<span style="color:${rank.color}; filter: drop-shadow(0 0 5px ${rank.color}66);">${rank.name}</span>`;
-        }
+        ['rankNameDisplay', 'profileRankName'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerHTML = `<span style="color:${rank.color}; filter: drop-shadow(0 0 5px ${rank.color}66);">${rank.name}</span>`;
+            }
+        });
 
         const uNameDisp = document.getElementById('userNameDisplay');
         if (uNameDisp) uNameDisp.innerHTML = `${this.user.name} <span style="font-size: 0.65rem; color: #94a3b8; opacity: 0.7;">Lvl ${p.passLevel}</span>`;
