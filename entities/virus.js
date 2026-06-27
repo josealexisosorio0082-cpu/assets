@@ -17,14 +17,17 @@ const Virus = {
         }
     },
 
-    update() {
+    update(dt = 16.6) {
+        const dtFactor = dt / 16.6;
+        const damping = Math.pow(0.95, dtFactor);
+
         for (let i = this.items.length - 1; i >= 0; i--) {
             const virus = this.items[i];
-            virus.breathPhase += 0.05;
+            virus.breathPhase += 0.05 * dtFactor;
 
             if (virus.vx || virus.vy) {
-                virus.x += virus.vx; virus.y += virus.vy;
-                virus.vx *= 0.95; virus.vy *= 0.95;
+                virus.x += virus.vx * dtFactor; virus.y += virus.vy * dtFactor;
+                virus.vx *= damping; virus.vy *= damping;
                 if (Math.abs(virus.vx) < 0.1) virus.vx = 0;
                 if (Math.abs(virus.vy) < 0.1) virus.vy = 0;
             }

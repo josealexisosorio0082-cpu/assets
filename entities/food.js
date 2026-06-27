@@ -46,14 +46,17 @@ const Food = {
         this.items.push(f);
     },
 
-    update() {
+    update(dt = 16.6) {
         let ejectedCount = 0;
         let normalCount = 0;
+        const dtFactor = dt / 16.6;
+        const damping = Math.pow(0.94, dtFactor);
+
         for (let i = this.items.length - 1; i >= 0; i--) {
             const f = this.items[i];
 
             if (f.isDying) {
-                f.animRadius -= 1.25; // Scale Tween: 5 to 0 in ~4 frames
+                f.animRadius -= 1.25 * dtFactor; // Scale Tween: 5 to 0 in ~4 frames
                 if (f.animRadius <= 0) {
                     this.items.splice(i, 1);
                     this.recycle(f);
@@ -63,9 +66,9 @@ const Food = {
 
             if (f.ejected) {
                 ejectedCount++;
-                f.x += f.vx; f.y += f.vy;
-                f.vx *= 0.94; f.vy *= 0.94;
-                if (f.cooldown > 0) f.cooldown--;
+                f.x += f.vx * dtFactor; f.y += f.vy * dtFactor;
+                f.vx *= damping; f.vy *= damping;
+                if (f.cooldown > 0) f.cooldown -= dtFactor;
                 f.x = Math.max(5, Math.min(World.width - 5, f.x));
                 f.y = Math.max(5, Math.min(World.height - 5, f.y));
             } else {

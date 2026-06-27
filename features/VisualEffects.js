@@ -34,31 +34,33 @@
         }
     },
 
-    update() {
-        this.time += 0.016;
+    update(dt = 16.6) {
+        this.time += 0.016 * (dt / 16.6);
         const q = localStorage.getItem('game_quality') || 'high';
         const isLow = q === 'low';
+        const dtFactor = dt / 16.6;
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p.x += p.vx; p.y += p.vy;
-            p.opacity -= isLow ? 0.1 : 0.05;
+            p.x += p.vx * dtFactor; p.y += p.vy * dtFactor;
+            p.opacity -= (isLow ? 0.1 : 0.05) * dtFactor;
             if (p.opacity <= 0 || p.dead) this.particles.splice(i, 1);
         }
 
         for (let i = this.victims.length - 1; i >= 0; i--) {
             const v = this.victims[i];
-            v.progress += 0.1;
-            v.x += (v.attacker.x - v.x) * 0.2;
-            v.y += (v.attacker.y - v.y) * 0.2;
-            v.radius *= 0.8;
+            v.progress += 0.1 * dtFactor;
+            const vLerp = 1 - Math.pow(1 - 0.2, dtFactor);
+            v.x += (v.attacker.x - v.x) * vLerp;
+            v.y += (v.attacker.y - v.y) * vLerp;
+            v.radius *= Math.pow(0.8, dtFactor);
             if (v.progress >= 1 || v.radius < 1 || v.dead) this.victims.splice(i, 1);
         }
 
         for (let i = this.shockwaves.length - 1; i >= 0; i--) {
             const s = this.shockwaves[i];
-            s.radius += 15;
-            s.opacity -= 0.07;
+            s.radius += 15 * dtFactor;
+            s.opacity -= 0.07 * dtFactor;
             if (s.opacity <= 0 || s.dead) this.shockwaves.splice(i, 1);
         }
 
@@ -66,17 +68,17 @@
             const w = window.World ? window.World.width : 5000;
             const h = window.World ? window.World.height : 5000;
             for (const a of this.ambient) {
-                a.x += a.vx; a.y += a.vy;
+                a.x += a.vx * dtFactor; a.y += a.vy * dtFactor;
                 if (a.x < 0) a.x = w; if (a.x > w) a.x = 0;
                 if (a.y < 0) a.y = h; if (a.y > h) a.y = 0;
             }
         }
 
         if (this.shakeDuration > 0) {
-            this.shakeDuration--;
+            this.shakeDuration -= dtFactor;
             this.shakeOffset.x = (Math.random() * 2 - 1) * this.shakeIntensity;
             this.shakeOffset.y = (Math.random() * 2 - 1) * this.shakeIntensity;
-            this.shakeIntensity *= 0.9;
+            this.shakeIntensity *= Math.pow(0.9, dtFactor);
         } else {
             this.shakeOffset.x = 0; this.shakeOffset.y = 0;
         }

@@ -1,5 +1,6 @@
 ﻿var Leaderboard = {
     rankings: [],
+    lastHtml: "",
 
     update() {
         const multiplayerPlayers = (window.Multiplayer && window.Multiplayer.isConnected) ?
@@ -22,9 +23,10 @@
 
     render() {
         const panel = document.getElementById('leaderboard');
-        if (!Player.isPlaying() || panel.style.display === 'none') return;
+        if (!Player.isPlaying() || !panel || panel.style.display === 'none') return;
 
         let html = `<h3>TOP 10</h3>`;
+        // ... (resto del renderizado a reconstruir)
         const top10 = this.rankings.slice(0, 10);
         let playerInTop10 = false;
         let playerRank = 0;
@@ -82,6 +84,10 @@
                 `;
             }
         }
+
+        // Optimización: Solo actualizar el DOM si el HTML cambió
+        if (html === this.lastHtml) return;
+        this.lastHtml = html;
 
         panel.innerHTML = html;
     }

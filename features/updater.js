@@ -4,7 +4,8 @@
  * @version 1.7.0 [BLINDAJE DEFINITIVO]
  */
 
-const COMMITS_URL = "https://api.github.com/repos/josealexisosorio0082-cpu/Slip_Game/commits?per_page=1";
+// El repositorio exacto confirmado por el usuario es: https://github.com/josealexisosorio0082-cpu/assets
+const COMMITS_URL = "https://api.github.com/repos/josealexisosorio0082-cpu/assets/commits?per_page=1";
 
 const Updater = {
     isUpdateFound: false,
@@ -55,12 +56,17 @@ const Updater = {
 
             console.log(`[Updater] Verificando: ${antiCacheUrl}`);
 
-            // Si no hay bridge, estamos en navegador y podría fallar por CORS
+            // GitHub API requiere User-Agent y Accept específicos para funcionar correctamente
             const response = await fetch(antiCacheUrl, {
-                headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
+                headers: {
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache",
+                    "Accept": "application/vnd.github.v3+json",
+                    "User-Agent": "SlipGame-Updater-App"
+                },
                 signal: controller.signal
             }).catch(err => {
-                if (!window.AndroidBridge) throw new Error("BLOQUEO DE NAVEGADOR (CORS)");
+                if (!window.AndroidBridge) throw new Error("CORS: BLOQUEO DE NAVEGADOR");
                 throw err;
             });
 
@@ -72,7 +78,10 @@ const Updater = {
                     const waitMin = resetTime ? Math.ceil((new Date(resetTime * 1000) - Date.now()) / 60000) : '60';
                     throw new Error(`Límite de GitHub alcanzado. Reintenta en ${waitMin} min.`);
                 }
-                throw new Error(`Error de Servidor: ${response.status}`);
+                if (response.status === 404) {
+                    throw new Error("REPOSITORIO NO ENCONTRADO (404)");
+                }
+                throw new Error(`STATUS ${response.status}: SERVIDOR GITHUB`);
             }
 
             const data = await response.json();
@@ -84,22 +93,26 @@ const Updater = {
             const remoteDate = data[0].commit.committer.date;
             const commitMessage = data[0].commit.message;
 
+            // DETECCIÓN DE VERSIÓN OBLIGATORIA
+            // Si el mensaje del commit contiene [!] es una actualización obligatoria para Multiplayer
+            const isMandatory = commitMessage.includes("[!]") || commitMessage.toLowerCase().includes("mandatory");
+
             // CONVERSIÓN DE FECHAS A NÚMEROS (PARSEO OBLIGATORIO)
             const remoteTimestamp = new Date(remoteDate).getTime();
 
             // CONSOLE.LOGS DE DIAGNÓSTICO
-            console.log(`[Nexus Debug] Local TS: ${localTimestamp} | Remote TS: ${remoteTimestamp}`);
+            console.log(`[Nexus Debug] Local TS: ${localTimestamp} | Remote TS: ${remoteTimestamp} | Mandatory: ${isMandatory}`);
 
             // COMPARACIÓN NUMÉRICA IMPERMEABLE
             if (remoteTimestamp > localTimestamp) {
                 console.log("[Updater] Nueva implementación detectada en el repositorio.");
                 this.isUpdateFound = true;
 
-                // NOTIFICACIÓN NATIVA (SI ESTÁ EN SEGUNDO PLANO O APPBRIDGE DISPONIBLE)
+                // NOTIFICACIÓN NATIVA
                 if (window.AndroidBridge && window.AndroidBridge.sendLocalNotification) {
                     window.AndroidBridge.sendLocalNotification(
-                        "⚠️ ACTUALIZACIÓN DISPONIBLE",
-                        "Nueva versión crítica detectada. Toca para instalar mejoras ahora."
+                        "Actualización Disponible",
+                        "Hay mejoras disponibles para Slip Game. Toca para actualizar."
                     );
                 }
 
@@ -112,15 +125,13 @@ const Updater = {
 
             let userMsg = "ERROR DE CONEXIÓN";
             if (error.name === 'AbortError') {
-                userMsg = "TIEMPO AGOTADO (RED LENTA)";
+                userMsg = "REINTENTANDO...";
             } else if (error.message.includes("Límite")) {
-                userMsg = error.message.toUpperCase();
-            } else if (error.message.includes("Error de Servidor")) {
-                userMsg = "GITHUB OFFLINE O ERROR 500";
+                userMsg = "ESPERANDO SERVIDOR...";
             } else if (error.message === "Failed to fetch" || error.message.includes("network")) {
-                userMsg = "SIN ACCESO A INTERNET";
+                userMsg = "SIN INTERNET";
             } else {
-                userMsg = `FALLO: ${error.message.toUpperCase()}`;
+                userMsg = "SINCRONIZANDO...";
             }
 
             // Notificación visual específica
@@ -135,7 +146,6 @@ const Updater = {
     showUpdateModal: function(remoteTimestamp, message) {
         if (window.Engine) {
             window.Engine.isPaused = true;
-            // Detener el loop visual si es posible
             if (window.canvas) window.canvas.style.pointerEvents = 'none';
         }
 
@@ -146,37 +156,38 @@ const Updater = {
         modal.className = 'cyber-modal-full';
 
         const dateObj = new Date(remoteTimestamp);
-        const displayDate = dateObj.toLocaleDateString() + " " + dateObj.toLocaleTimeString();
+        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+        const displayDate = dateObj.toLocaleDateString('es-ES', options);
+
+        // Limpiar el mensaje de cualquier etiqueta técnica
+        const cleanMessage = message.replace(/\[!\]/g, '').replace(/mandatory/gi, '').trim() || "Mejoras de rendimiento y estabilidad.";
 
         modal.innerHTML = `
             <div class="cyber-content">
-                <div class="glitch-header" data-text="ACTUALIZACIÓN CRÍTICA">ACTUALIZACIÓN CRÍTICA</div>
-                <div class="sub-header">// DEPLOY_DATE: ${displayDate}</div>
+                <div class="update-header">NUEVA VERSIÓN</div>
+                <div class="sub-header">Publicada el ${displayDate}</div>
                 <div class="changelog-container">
-                    <div class="changelog-title">NEXUS_STREAM_DATA</div>
+                    <div class="changelog-title">NOTAS DE LA VERSIÓN</div>
                     <ul class="changelog-list">
-                        <li>${message}</li>
+                        <li>${cleanMessage}</li>
                     </ul>
                 </div>
                 <div class="action-row">
-                    <button id="btnInstallUpdate" class="cyber-btn primary">INSTALAR MEJORAS</button>
-                    <button id="btnAbortUpdate" class="cyber-btn danger">SALIR</button>
+                    <button id="btnInstallUpdate" class="cyber-btn primary">ACTUALIZAR AHORA</button>
+                    <button id="btnExitUpdate" class="cyber-btn danger" style="font-size: 0.7rem; opacity: 0.6;">CERRAR JUEGO</button>
                 </div>
             </div>
         `;
 
-        // ASEGURAR QUE NADA MÁS SE PUEDA TOCAR
         modal.onclick = (e) => e.stopPropagation();
-
         document.body.appendChild(modal);
 
         document.getElementById('btnInstallUpdate').onclick = () => {
             localStorage.setItem("LAST_DEPLOY_TIMESTAMP", remoteTimestamp);
-            // Si estamos en la app nativa, esto recargará el asset
             window.location.reload(true);
         };
 
-        document.getElementById('btnAbortUpdate').onclick = () => {
+        document.getElementById('btnExitUpdate').onclick = () => {
             if (window.AndroidBridge && window.AndroidBridge.exitApp) {
                 window.AndroidBridge.exitApp();
             } else if (navigator.app && navigator.app.exitApp) {
@@ -210,22 +221,23 @@ const Updater = {
         const style = document.createElement('style');
         style.id = 'updater-styles';
         style.textContent = `
-            .cyber-modal-full { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 18, 0.98); backdrop-filter: blur(25px); z-index: 1000000; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; }
-            .cyber-content { width: 85%; max-width: 450px; padding: 35px; border: 2px solid #8b5cf6; box-shadow: 0 0 60px rgba(139, 92, 246, 0.4); background: #0a0a12; text-align: center; }
-            .glitch-header { font-size: 1.5rem; font-weight: 950; color: #fff; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 5px; text-shadow: 2px 0 #ff0055, -2px 0 #00fff2; }
-            .sub-header { font-size: 0.7rem; color: #8b5cf6; font-weight: 900; margin-bottom: 25px; opacity: 0.8; }
-            .changelog-container { background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); padding: 20px; text-align: left; margin-bottom: 25px; }
-            .changelog-title { font-size: 0.6rem; color: #8b5cf6; font-weight: 900; margin-bottom: 10px; opacity: 0.6; letter-spacing: 2px; }
+            .cyber-modal-full { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 18, 0.95); backdrop-filter: blur(15px); z-index: 1000000; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; }
+            .cyber-content { width: 85%; max-width: 400px; padding: 30px; border: 1.5px solid #8b5cf6; border-radius: 20px; box-shadow: 0 0 50px rgba(139, 92, 246, 0.3); background: #0a0a12; text-align: center; }
+            .update-header { font-size: 1.4rem; font-weight: 950; color: #fff; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+            .sub-header { font-size: 0.75rem; color: #8b5cf6; font-weight: 800; margin-bottom: 25px; opacity: 0.9; }
+            .changelog-container { background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 25px; }
+            .changelog-title { font-size: 0.65rem; color: #8b5cf6; font-weight: 900; margin-bottom: 8px; opacity: 0.7; letter-spacing: 1px; }
             .changelog-list { list-style: none; padding: 0; margin: 0; }
-            .changelog-list li { font-size: 0.8rem; color: #e2e8f0; margin-bottom: 8px; padding-left: 15px; position: relative; }
-            .changelog-list li::before { content: '>'; position: absolute; left: 0; color: #8b5cf6; }
-            .action-row { display: flex; gap: 15px; }
-            .cyber-btn { flex: 1; padding: 15px; border: none; font-weight: 950; text-transform: uppercase; cursor: pointer; border-radius: 4px; font-size: 0.75rem; transition: 0.3s; }
-            .cyber-btn.primary { background: #8b5cf6; color: #fff; box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
-            .cyber-btn.danger { background: transparent; color: #ef4444; border: 1px solid #ef4444; }
-            .update-toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: rgba(10, 10, 18, 0.95); border: 2px solid #8b5cf6; padding: 15px 30px; border-radius: 12px; z-index: 1000001; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
-            .update-toast.show { top: 30px; }
-            .toast-text { color: #fff; font-weight: 950; font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; text-align: center; }
+            .changelog-list li { font-size: 0.8rem; color: #e2e8f0; margin-bottom: 5px; padding-left: 15px; position: relative; line-height: 1.4; }
+            .changelog-list li::before { content: '•'; position: absolute; left: 0; color: #8b5cf6; }
+            .action-row { display: flex; flex-direction: column; gap: 10px; }
+            .cyber-btn { width: 100%; padding: 14px; border: none; font-weight: 950; text-transform: uppercase; cursor: pointer; border-radius: 12px; font-size: 0.8rem; transition: 0.3s; }
+            .cyber-btn.primary { background: #8b5cf6; color: #fff; box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3); }
+            .cyber-btn.primary:active { transform: scale(0.98); }
+            .cyber-btn.danger { background: transparent; color: #94a3b8; font-size: 0.7rem; }
+            .update-toast { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: rgba(10, 10, 18, 0.9); border: 1.5px solid #8b5cf6; padding: 10px 25px; border-radius: 50px; z-index: 1000001; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+            .update-toast.show { bottom: 30px; }
+            .toast-text { color: #fff; font-weight: 950; font-size: 0.65rem; letter-spacing: 1.5px; text-transform: uppercase; text-align: center; }
         `;
         document.head.appendChild(style);
     }

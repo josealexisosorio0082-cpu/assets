@@ -1,6 +1,7 @@
 ﻿const HUD = {
     isLeaderboardVisible: true, // Visible por defecto
     announcementTimer: null,
+    lastScore: -1,
 
     init() {
         const toggle = document.getElementById('leaderboardToggle');
@@ -47,6 +48,11 @@
         const scoreEl = document.getElementById('scoreDisplay');
         if (!Player.isPlaying() || !scoreEl) return;
         const mass = Math.floor(Player.getMass());
+
+        // Optimización: Solo actualizar si la puntuación cambió
+        if (mass === this.lastScore) return;
+        this.lastScore = mass;
+
         scoreEl.innerText = mass;
 
         // MÓDULO 3: Text-shadow neón que coincide con el color de la célula

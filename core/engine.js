@@ -40,6 +40,7 @@ var Engine = {
     isStarted: false,
     startTime: 0,
     lastTime: 0,
+    deltaTime: 0,
     missions: [],
     leaderboardTimer: 0,
     quality: localStorage.getItem('game_quality') || 'high',
@@ -49,6 +50,8 @@ var Engine = {
         console.log("Iniciando motor del juego...");
         this.isPaused = false;
         this.startTime = Date.now();
+        this.lastTime = performance.now();
+        this.deltaTime = 0;
 
         // Incrementar total de partidas
         let totalGames = parseInt(localStorage.getItem('slip_total_games') || 0);
@@ -61,6 +64,9 @@ var Engine = {
             this.resetPlayArea();
         } else {
             this.isStarted = true;
+            const w = (window.World && window.World.width) ? window.World.width : 5000;
+            const h = (window.World && window.World.height) ? window.World.height : 5000;
+            SpatialGrid.init(w, h, 200);
             HUD.init();
             Food.generate();
             Bots.generate(50);
@@ -69,7 +75,7 @@ var Engine = {
             this.updateControlUI();
 
             // Iniciar el loop solo si no está ya corriendo
-            gameLoop();
+            requestAnimationFrame(gameLoop);
         }
 
         const ui = document.getElementById('gameplayUI');
@@ -515,16 +521,26 @@ var Engine = {
         };
     },
 
-    update() {
+    update(dt) {
         if (this.isPaused) return;
+
+        this.deltaTime = dt;
+        const dtFactor = dt / (1000/60); // Factor relativo a 60fps
 
         // CACHÉ GLOBAL DE CÁLCULOS MATEMÁTICOS POR FRAME (REGLA DE ORO 1)
         window.GLOBAL_FRAME_TIME = Date.now();
         window.GLOBAL_SINE_PULSE = Math.sin(window.GLOBAL_FRAME_TIME * 0.005);
 
+        // Actualizar Rejilla Espacial
+        SpatialGrid.clear();
+        Food.items.forEach(f => SpatialGrid.insert(f));
+        Bots.items.forEach(b => SpatialGrid.insert(b));
+        Virus.items.forEach(v => SpatialGrid.insert(v));
+        Player.cells.forEach(c => SpatialGrid.insert(c));
+
         if (joystick.stick) joystick.stick.style.transform = `translate(${joystick.currentX}px, ${joystick.currentY}px)`;
 
-        const lerpSpeed = 0.12;
+        const lerpSpeed = 1 - Math.pow(1 - 0.12, dtFactor);
         window.mouse.x += (window.mouse.targetX - window.mouse.x) * lerpSpeed;
         window.mouse.y += (window.mouse.targetY - window.mouse.y) * lerpSpeed;
 
@@ -536,51 +552,56 @@ var Engine = {
             return;
         }
 
-        // 1. Recolección de comida (Optimizado con paso de muestreo)
+        // 1. Recolección de comida (Optimizado con SpatialGrid)
         const cells = Player.cells;
         const isLow = this.quality === 'low';
 
-        for(let i = Food.items.length - 1; i >= 0; i--) {
-            const f = Food.items[i];
-            for(let j = 0; j < cells.length; j++) {
-                const cell = cells[j];
+        for (let j = 0; j < cells.length; j++) {
+            const cell = cells[j];
+            const nearbyFood = SpatialGrid.query(cell.x, cell.y, cell.radius + 20);
+
+            for (let i = 0; i < nearbyFood.length; i++) {
+                const f = nearbyFood[i];
+                if (f.mass !== undefined || f.spikes !== undefined) continue; // Si es bot/virus, saltar
+                if (f.isDying) continue;
+
                 const dx = cell.x - f.x, dy = cell.y - f.y;
-                const distSq = dx*dx + dy*dy;
-                if(distSq < cell.radius * cell.radius) {
+                const distSq = dx * dx + dy * dy;
+                if (distSq < cell.radius * cell.radius) {
                     cell.mass += (f.ejected ? 3 : 1);
                     cell.targetRadius = 30 * Math.sqrt(cell.mass / 30);
 
-                    if(!isLow && window.VisualEffects) {
+                    if (!isLow && window.VisualEffects) {
                         window.VisualEffects.spawnEatParticles(f.x, f.y, f.color);
                     }
 
                     f.isDying = true;
                     this.trackMission('food');
-                    break;
                 }
             }
         }
 
-        Player.update(window.mouse);
+        Player.update(window.mouse, dt);
         if (window.Multiplayer) window.Multiplayer.sendUpdate();
 
         // MÓDULO 2: Garbage Collection de Entidades (Limpieza inmediata)
-        Food.update();
-        Bots.update();
-        Virus.update();
+        Food.update(dt);
+        Bots.update(dt);
+        Virus.update(dt);
 
-        this.leaderboardTimer++;
+        this.leaderboardTimer += dtFactor;
         if (this.leaderboardTimer >= 40) {
             Leaderboard.update();
             Leaderboard.render();
             this.leaderboardTimer = 0;
         }
         this.trackMission('survive');
-        if(window.VisualEffects) window.VisualEffects.update();
+        if(window.VisualEffects) window.VisualEffects.update(dt);
 
         const center = Player.getCenter();
         const targetZoom = Math.max(0.2, 0.9 / (1 + Math.sqrt(Player.getMass() / 1500)));
-        window.camera.zoom += (targetZoom - window.camera.zoom) * 0.05;
+        const zoomLerp = 1 - Math.pow(1 - 0.05, dtFactor);
+        window.camera.zoom += (targetZoom - window.camera.zoom) * zoomLerp;
 
         // MÓDULO 3: CORRECCIÓN DE CÁMARA DESCENTRADA EN BORDES DE MAPA
         const viewW = window.innerWidth / window.camera.zoom;
@@ -605,8 +626,9 @@ var Engine = {
         }
 
         // Interpolación LERP para un seguimiento suave y cinematográfico
-        window.camera.x += (targetX - window.camera.x) * 0.1;
-        window.camera.y += (targetY - window.camera.y) * 0.1;
+        const camLerp = 1 - Math.pow(1 - 0.1, dtFactor);
+        window.camera.x += (targetX - window.camera.x) * camLerp;
+        window.camera.y += (targetY - window.camera.y) * camLerp;
     },
 
     render() {
@@ -848,11 +870,15 @@ if (document.readyState === "complete" || document.readyState === "interactive")
     window.addEventListener("DOMContentLoaded", () => setTimeout(startEverything, 10));
 }
 
-function gameLoop() {
+function gameLoop(time) {
+    if (!Engine.isStarted) return;
     try {
-        Engine.update();
+        const dt = Math.min(100, time - (Engine.lastTime || time));
+        Engine.lastTime = time;
+
+        Engine.update(dt);
         Engine.render();
-        if (Engine.isStarted) requestAnimationFrame(gameLoop);
+        requestAnimationFrame(gameLoop);
     } catch (e) {
         console.error("Error en gameLoop:", e);
         requestAnimationFrame(gameLoop);

@@ -1,6 +1,7 @@
 const GAME_VERSION = '0.1';
 
 const CONFIG = {
+    version: "1.8.0", // Versión actual del juego
     world: {
         width: 5000,
         height: 5000,

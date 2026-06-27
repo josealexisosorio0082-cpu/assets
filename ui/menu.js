@@ -290,62 +290,157 @@
     },
 
     loadDynamicSkins() {
-        const free = ["Free (1).png", "Free (3).jpg", "Free (4).jpg"];
-        const level = ["Por Nivel (1).png", "Por Nivel (2).png", "Por Nivel (3).png", "Por Nivel (4).png", "Por Nivel (5).png"];
-        const premium = Array.from({length: 24}, (_, i) => (i + 1 <= 12 ? `Premium (${i+1}).png` : `Premium (${i+1}).jpg`));
-        let files = [];
-        if (window.AndroidBridge && window.AndroidBridge.getSkinImages) {
-            try { const res = window.AndroidBridge.getSkinImages(); if (res) files = res.split(','); } catch(e) {}
-        }
-        if (files.length === 0) {
-            free.forEach(s => files.push(`skins gratis/${s}`));
-            level.forEach(s => files.push(`skins por nivel/${s}`));
-            premium.forEach(s => files.push(`skins por slip coins 15-70/${s}`));
-        }
+        console.log("Slip Game: Iniciando FolderStorageScanner...");
+        const folders = [
+            { path: 'extras del juego/', type: 'aesthetic' },
+            { path: 'skins gratis/', type: 'free' },
+            { path: 'skins por nivel/', type: 'tactical' },
+            { path: 'skins por slip coins 15-70/', type: 'premium' }
+        ];
+
+        let scanCount = 0;
+        const totalToScan = folders.length * 30;
+
+        folders.forEach(folder => {
+            for (let i = 1; i <= 30; i++) {
+                const extensions = ['.png', '.jpg'];
+                extensions.forEach(ext => {
+                    const fileName = `skin (${i})${ext}`;
+                    // Caso especial para nombres que no siguen el patrón estricto si es necesario,
+                    // pero seguiremos el patrón solicitado: 'skin-' + i o similar.
+                    // El usuario mencionó: 'ui/images/skins por slip coins 15-70/skin-' + i + '.png'
+                    // Pero también hay archivos con espacios y paréntesis en el código viejo.
+                    // Ajustaré para probar ambos patrones comunes: "skin (i)" y "skin-i".
+
+                    this.tryLoadSkin(folder.path, `skin (${i})${ext}`, folder.type);
+                    this.tryLoadSkin(folder.path, `skin-${i}${ext}`, folder.type);
+
+                    // También incluiremos el formato del código anterior por si acaso
+                    if (folder.type === 'free') this.tryLoadSkin(folder.path, `Free (${i})${ext}`, folder.type);
+                    if (folder.type === 'tactical') this.tryLoadSkin(folder.path, `Por Nivel (${i})${ext}`, folder.type);
+                    if (folder.type === 'premium') this.tryLoadSkin(folder.path, `Premium (${i})${ext}`, folder.type);
+                });
+            }
+        });
+
+        // Skins exclusivas manuales (se mantienen como fallback o especiales)
         const exclusives = ["Exclusive (1).png", "Exclusive (2).png", "Cyber Micky.png"];
-        exclusives.forEach(ex => files.push(`skins exclusivas/${ex}`));
-        this.processSkinFiles(files);
+        exclusives.forEach(ex => this.tryLoadSkin('skins exclusivas/', ex, 'exclusive'));
+    },
+
+    tryLoadSkin(folder, file, type) {
+        const path = folder + file;
+        const url = `ui/images/${path}`;
+
+        // Evitar duplicados
+        if (this.skins[path]) return;
+
+        const img = new Image();
+        img.onload = () => {
+            console.log(`[Scanner] Detectado: ${path}`);
+            this.processDetectedSkin(path, img, type);
+        };
+        img.onerror = () => {
+            // Ignorar errores de carga (archivos inexistentes)
+        };
+        img.src = url;
+    },
+
+    processDetectedSkin(id, img, type) {
+        const analysis = this.analyzeImageComplexity(img);
+        const config = this.calibrateEconomy(analysis, type);
+
+        this.skins[id] = {
+            id: id,
+            name: config.name.toUpperCase(),
+            url: img.src,
+            price: config.price,
+            level: config.level,
+            exclusive: type === 'exclusive',
+            req: config.req || "",
+            rarity: config.rarity
+        };
+        this.skinImages[id] = img;
+
+        // Actualizar UI si estamos en la tienda
+        if (this.currentState === this.STATES.TIENDA) {
+            this.renderSkinList();
+        }
+
+        // Seleccionar la primera skin si no hay ninguna
+        if (!this.currentSkin) {
+            this.currentSkin = id;
+            this.updateMenuUI();
+        }
+    },
+
+    analyzeImageComplexity(img) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 50; canvas.height = 50; // Miniatura para análisis rápido
+        ctx.drawImage(img, 0, 0, 50, 50);
+
+        const data = ctx.getImageData(0, 0, 50, 50).data;
+        let brightness = 0, variety = new Set(), details = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            const avg = (r + g + b) / 3;
+            brightness += avg;
+
+            // Medir variedad de colores (simplificado en cubos de 32)
+            const colorKey = `${Math.floor(r/32)},${Math.floor(g/32)},${Math.floor(b/32)}`;
+            variety.add(colorKey);
+
+            // Detalles: cambios bruscos de contraste con el pixel anterior
+            if (i > 0) {
+                const prevAvg = (data[i-4] + data[i-3] + data[i-2]) / 3;
+                if (Math.abs(avg - prevAvg) > 30) details++;
+            }
+        }
+
+        return {
+            brightness: brightness / (canvas.width * canvas.height),
+            colorVariety: variety.size,
+            detailDensity: details / (canvas.width * canvas.height)
+        };
+    },
+
+    calibrateEconomy(analysis, type) {
+        let price = 0, level = 0, rarity = 'COMÚN', name = "NEON GRID";
+        const complexity = (analysis.brightness * 0.3) + (analysis.colorVariety * 2) + (analysis.detailDensity * 50);
+
+        if (type === 'premium') {
+            if (complexity > 120) { // Elite Supremo
+                price = Math.floor(10001 + (Math.random() * 9999));
+                rarity = 'LEGENDARIA';
+                const names = ["GOD PROTOCOL Ω", "NEXUS OVERLORD INFINITY", "VOID REAPER ULTRA", "ETERNITY CORE", "NEO GENESIS"];
+                name = names[Math.floor(Math.random() * names.length)];
+            } else { // Estándar/Avanzado
+                price = Math.floor(500 + (Math.random() * 9500));
+                rarity = complexity > 80 ? 'ÉPICA' : 'COMÚN';
+                const names = ["CYBER PULSE", "NIGHT STALKER", "PLASMA EDGE", "DATA GHOST"];
+                name = names[Math.floor(Math.random() * names.length)];
+            }
+        } else if (type === 'tactical') {
+            level = Math.floor(5 + (Math.min(1, complexity / 150) * 45));
+            rarity = level > 30 ? 'ÉPICA' : 'COMÚN';
+            const names = ["CYBER HUNTER L-42", "APEX GLITCH", "TACTICAL VORTEX", "STRIKER X"];
+            name = names[Math.floor(Math.random() * names.length)];
+        } else {
+            // Free or Aesthetic
+            price = 0;
+            rarity = complexity > 100 ? 'RARE' : 'COMÚN';
+            const names = ["Neon Grid", "Pulse Core", "Static Blue", "Vibe Wave"];
+            name = names[Math.floor(Math.random() * names.length)];
+        }
+
+        return { price, level, rarity, name };
     },
 
     processSkinFiles(files) {
-        files.forEach(file => {
-            if (!file || !file.includes('.') || this.skins[file]) return;
-            let path = file, low = file.toLowerCase();
-            if (!file.includes('/')) {
-                if (low.includes('free')) path = `skins gratis/${file}`;
-                else if (low.includes('nivel')) path = `skins por nivel/${file}`;
-                else if (low.includes('premium')) path = `skins por slip coins 15-70/${file}`;
-                else if (low.includes('exclusiva')) path = `skins exclusivas/${file}`;
-            }
-            const isFree = path.includes('gratis') || path.includes('free'), isLevel = path.includes('nivel') || path.includes('level');
-            const isPremium = path.includes('premium') || path.includes('coins'), isExcl = path.includes('exclusiva') || path.includes('Exclusive');
-            const num = (path.match(/\((\d+)\)/) || [0, 1])[1];
-            let name = "Skin " + num, price = 0, lvl = 0, excl = false, req = "", rarity = 'COMÚN';
-            if (isFree) { name = ["Nebulosa", "Atómica", "Plasma", "Vórtice", "Estelar"][num-1] || "Libre " + num; }
-            else if (isLevel) { name = ["Explorador", "Guerrero", "Veterano", "Maestro", "Leyenda", "Supremo"][num-1] || "Rango " + num; lvl = parseInt(num); rarity = lvl > 4 ? 'LEGENDARIA' : 'ÉPICA'; }
-            else if (isPremium) {
-                name = ["Galáctica", "Cibernética", "Fénix", "Ártico", "Sombra", "Oro", "Diamante", "Rubí", "Infinito", "Caos", "Nova", "Dragón", "Samurái", "Ninja", "Robot", "Alien", "Cósmico", "Titanio", "Obsidiana", "Relámpago", "Quásar", "Espectral", "Místico", "Supremo"][(num-1)%24] || "Premium " + num;
-                if (num % 6 === 0) {
-                    rarity = 'LEGENDARIA';
-                    price = 8500 + (num % 5) * 500; // 8,500 - 10,500
-                } else if (num % 2 === 0) {
-                    rarity = 'ÉPICA';
-                    price = 3200 + (num % 8) * 200; // 3,200 - 4,600
-                } else {
-                    rarity = 'COMÚN';
-                    price = 1200 + (num % 4) * 150; // 1,200 - 1,650
-                }
-            }
-            else if (isExcl) { excl = true; rarity = 'EXCLUSIVE'; if (path.includes('(1)')) { name = "Fénix Oscuro"; req = "Nivel 10 del Pase"; path = `procedural_1100`; } else if (path.includes('(2)')) { name = "Súper Nova"; req = "Nivel 30 del Pase"; path = `procedural_1200`; } else if (path.includes('Micky')) { name = "Cyber Micky"; req = "50 victorias LAN"; } }
-            const url = path.startsWith('procedural_') ? "" : `ui/images/${path}`;
-            this.skins[path] = { id: path, name: name.toUpperCase(), url: url, price: price, level: lvl, exclusive: excl, req: req, rarity: rarity };
-            if (url) { const img = new Image(); img.src = url; this.skinImages[path] = img; }
-        });
-        const savedSkin = localStorage.getItem('selectedSkin');
-        if (savedSkin && this.skins[savedSkin]) this.currentSkin = savedSkin;
-        else if (Object.keys(this.skins).length > 0) this.currentSkin = Object.keys(this.skins)[0];
-        this.updateMenuUI();
-        this.renderSkinList();
+        // Esta función queda obsoleta por el nuevo scanner,
+        // pero la mantendremos vacía para no romper llamadas externas si existen.
     },
 
     updateQualityButtons() {

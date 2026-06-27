@@ -57,19 +57,20 @@ const Player = {
         return pts;
     },
 
-    updateSprings(cell) {
+    updateSprings(cell, dt = 16.6) {
         const pts = cell.points;
         if (!pts || pts.length === 0) return;
-        const k = 0.12, damp = 0.88;
+        const dtFactor = dt / 16.6;
+        const k = 0.12, damp = Math.pow(0.88, dtFactor);
         // Reducimos el factor de inercia (0.25 -> 0.1) para que la skin no se "despegue" tanto del centro
         const inertia = 0.1;
         for(let i=0; i<pts.length; i++) {
             const p = pts[i], angle = (i/pts.length) * Math.PI * 2;
             const tx = Math.cos(angle) * cell.visualRadius, ty = Math.sin(angle) * cell.visualRadius;
-            p.vx += (tx - p.x) * k - cell.vx * inertia;
-            p.vy += (ty - p.y) * k - cell.vy * inertia;
+            p.vx += ((tx - p.x) * k - cell.vx * inertia) * dtFactor;
+            p.vy += ((ty - p.y) * k - cell.vy * inertia) * dtFactor;
             p.vx *= damp; p.vy *= damp;
-            p.x += p.vx; p.y += p.vy;
+            p.x += p.vx * dtFactor; p.y += p.vy * dtFactor;
         }
     },
 
@@ -132,11 +133,15 @@ const Player = {
         }
     },
 
-    update(mouse) {
+    update(mouse, dt = 16.6) {
         if (this.isDead) return;
-        const damping = 0.94;
+        const dtFactor = dt / 16.6;
+        const damping = Math.pow(0.94, dtFactor);
         const worldWidth = window.World ? window.World.width : 5000;
         const worldHeight = window.World ? window.World.height : 5000;
+
+        // Identificar fragmento principal una vez por frame
+        this.mainFragment = this.cells.length > 0 ? this.cells.reduce((prev, current) => (prev.mass > current.mass) ? prev : current) : null;
 
         // 1. Movimiento y actualización de cada celda
         for (let i = 0; i < this.cells.length; i++) {
@@ -146,7 +151,7 @@ const Player = {
 
             const speedLimit = (18 / Math.sqrt(cell.mass)) + 0.35 + this.bonusSpeed;
 
-            const accel = 0.22 + (this.bonusSpeed * 0.5);
+            const accel = (0.22 + (this.bonusSpeed * 0.5)) * dtFactor;
             cell.vx += (dx / dist) * accel;
             cell.vy += (dy / dist) * accel;
             cell.vx *= damping; cell.vy *= damping;
@@ -157,12 +162,13 @@ const Player = {
                 cell.vx *= f; cell.vy *= f;
             }
 
-            cell.x += cell.vx; cell.y += cell.vy;
-            cell.radius += (cell.targetRadius - cell.radius) * 0.1;
-            cell.visualRadius += (cell.radius - cell.visualRadius) * 0.1;
-            this.updateSprings(cell);
+            cell.x += cell.vx * dtFactor; cell.y += cell.vy * dtFactor;
+            const rLerp = 1 - Math.pow(1 - 0.1, dtFactor);
+            cell.radius += (cell.targetRadius - cell.radius) * rLerp;
+            cell.visualRadius += (cell.radius - cell.visualRadius) * rLerp;
+            this.updateSprings(cell, dt);
 
-            if (cell.mergeTimer > 0) cell.mergeTimer -= 0.016;
+            if (cell.mergeTimer > 0) cell.mergeTimer -= (0.016 * dtFactor);
 
             // 2. Colisiones internas (entre celdas del propio jugador) - Única "Pared" Física
             for (let j = i + 1; j < this.cells.length; j++) {
@@ -183,65 +189,68 @@ const Player = {
                         // Empuje físico firme ("Pared") solo entre células propias
                         const overlap = (minD - d);
                         const nx = dX / d, ny = dY / d;
-                        const force = Math.min(overlap * 0.25, 10); // Limitar fuerza para evitar saltos locos
+                        const force = Math.min(overlap * 0.25, 10) * dtFactor; // Limitar fuerza para evitar saltos locos
                         cell.vx += nx * force; cell.vy += ny * force;
                         other.vx -= nx * force; other.vy -= ny * force;
                         // Cohesión para mantener el grupo unido
-                        const cohesion = 0.08;
+                        const cohesion = 0.08 * dtFactor;
                         cell.vx -= nx * cohesion; cell.vy -= ny * cohesion;
                         other.vx += nx * cohesion; other.vy += ny * cohesion;
                     }
                 }
             }
 
-            // 3. Colisiones externas (Bots) - Basado en Masa (11%) y Solapamiento (39%)
+            // 3. Colisiones externas (Bots) - Optimizado con SpatialGrid
             const massDiff = 1.11;
-            for(let j = Bots.items.length - 1; j >= 0; j--) {
-                const bot = Bots.items[j];
-                const dX = cell.x - bot.x, dY = cell.y - bot.y;
-                const d2 = dX*dX + dY*dY;
+            const nearbyEntities = SpatialGrid.query(cell.x, cell.y, cell.radius + 200);
 
-                const sumR = cell.radius + bot.radius;
+            for (let j = 0; j < nearbyEntities.length; j++) {
+                const other = nearbyEntities[j];
+                if (other.id === undefined || other.mass === undefined) continue; // No es un bot
+                if (other.isDead || other.type === 'player') continue; // Evitar colisión consigo mismo ya manejada
+
+                const dX = cell.x - other.x, dY = cell.y - other.y;
+                const d2 = dX * dX + dY * dY;
+                const sumR = cell.radius + other.radius;
+
                 if (d2 < sumR * sumR) {
                     const d = Math.sqrt(d2) || 1;
-                    const canEatBot = cell.mass > bot.mass * massDiff;
-                    const canBotEatMe = bot.mass > cell.mass * massDiff;
+                    const canEatBot = cell.mass > other.mass * massDiff;
+                    const canBotEatMe = other.mass > cell.mass * massDiff;
 
-                    if (canEatBot && d < cell.radius - bot.radius * 0.39) {
-                        if(window.VisualEffects) window.VisualEffects.spawnVictim(bot, cell);
-                        cell.mass += bot.mass * 0.9;
+                    if (canEatBot && d < cell.radius - other.radius * 0.39) {
+                        if (window.VisualEffects) window.VisualEffects.spawnVictim(other, cell);
+                        cell.mass += other.mass * 0.9;
                         cell.targetRadius = 30 * Math.sqrt(cell.mass / 30);
 
-                        // MÓDULO 2: LIMPIEZA INMEDIATA DE MEMORIA (QA REQ)
-                        Bots.items.splice(j, 1);
-                        setTimeout(() => {
-                            if (Bots.items.length < 50) Bots.items.push(Bots.createBot());
-                        }, 3000);
+                        // Eliminar bot de la lista global
+                        const idx = Bots.items.indexOf(other);
+                        if (idx !== -1) {
+                            Bots.items.splice(idx, 1);
+                            setTimeout(() => {
+                                if (Bots.items.length < 50) Bots.items.push(Bots.createBot());
+                            }, 3000);
+                        }
 
-                        if(window.Engine) window.Engine.trackMission('bots');
+                        if (window.Engine) window.Engine.trackMission('bots');
 
                         let totalEaten = parseInt(localStorage.getItem('slip_total_eaten') || 0);
                         localStorage.setItem('slip_total_eaten', totalEaten + 1);
 
-                        // MÓDULO 4: Sistema de Killstreaks
                         const now = Date.now();
-                        if (now - this.lastKillTime < 10000) {
-                            this.killStreak++;
-                        } else {
-                            this.killStreak = 1;
-                        }
+                        if (now - this.lastKillTime < 10000) this.killStreak++;
+                        else this.killStreak = 1;
                         this.lastKillTime = now;
                         if (window.HUD && window.HUD.announceKill) window.HUD.announceKill(this.killStreak);
                     }
-                    else if (canBotEatMe && d < bot.radius - cell.radius * 0.39) {
-                        if(window.VisualEffects) window.VisualEffects.spawnVictim(cell, bot);
-                        bot.mass += cell.mass * 0.9;
-                        bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
+                    else if (canBotEatMe && d < other.radius - cell.radius * 0.39) {
+                        if (window.VisualEffects) window.VisualEffects.spawnVictim(cell, other);
+                        other.mass += cell.mass * 0.9;
+                        other.targetRadius = 30 * Math.sqrt(other.mass / 30);
                         this.cells.splice(i, 1); i--;
-                        if(this.cells.length === 0) this.isDead = true;
+                        if (this.cells.length === 0) this.isDead = true;
                         break;
                     }
-                    // Quitar paredes externas: Jugador y Bots se sobreponen siempre (interpolan) libremente.
                 }
             }
 
@@ -262,7 +271,7 @@ const Player = {
     renderCell(ctx, camera, cell) {
         // MÓDULO 3: OPTIMIZACIÓN EXTREMA DE AURAS Y DIVISIONES
         // Si el jugador está dividido, solo renderizar efectos en el fragmento más grande
-        const isMainFragment = (cell === this.cells.sort((a,b) => b.mass - a.mass)[0]);
+        const isMainFragment = (cell === this.mainFragment);
         const isDivided = this.cells.length > 1;
 
         const sx = cell.x - camera.x, sy = cell.y - camera.y;

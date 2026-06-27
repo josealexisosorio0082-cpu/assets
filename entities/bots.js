@@ -112,9 +112,10 @@ const Bots = {
         }
     },
 
-    update() {
+    update(dt = 16.6) {
         const threshold = 1.15;
         const viewportMargin = 100;
+        const dtFactor = dt / 16.6;
 
         // Determinar viewport para LOD
         const viewW = window.innerWidth / window.camera.zoom;
@@ -131,7 +132,7 @@ const Bots = {
             const inViewport = (bot.x > viewX - viewportMargin && bot.x < viewX + viewW + viewportMargin &&
                                 bot.y > viewY - viewportMargin && bot.y < viewY + viewH + viewportMargin);
 
-            bot.updateCounter++;
+            bot.updateCounter += dtFactor;
             let shouldThink = false;
 
             if (inViewport) {
@@ -148,34 +149,35 @@ const Bots = {
             }
 
             if (shouldThink) {
-                this.think(bot, i, threshold);
+                this.think(bot, i, threshold, dt);
             }
 
             // Passive Mass Decay
             if (bot.mass > 50) {
                 let decayRate = 0.0004;
                 if (bot.mass > 1000) decayRate = 0.001;
-                bot.mass -= bot.mass * decayRate;
+                bot.mass -= bot.mass * decayRate * dtFactor;
                 bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
             }
 
             // Movimiento
             const speedFactor = (16 / Math.sqrt(bot.mass)) + 0.45;
-            const lerpSpeed = bot.tier === "pro" ? 0.15 : (bot.tier === "intermediate" ? 0.08 : 0.04);
+            const lerpSpeed = 1 - Math.pow(1 - (bot.tier === "pro" ? 0.15 : (bot.tier === "intermediate" ? 0.08 : 0.04)), dtFactor);
 
             bot.vx += (bot.tx * speedFactor - bot.vx) * lerpSpeed;
             bot.vy += (bot.ty * speedFactor - bot.vy) * lerpSpeed;
 
-            bot.x += bot.vx; bot.y += bot.vy;
+            bot.x += bot.vx * dtFactor; bot.y += bot.vy * dtFactor;
 
-            this.handleCollisions(bot, i, threshold);
+            this.handleCollisions(bot, i, threshold, dt);
 
-            bot.radius += (bot.targetRadius - bot.radius) * 0.1;
-            bot.visualRadius += (bot.radius - bot.visualRadius) * 0.1;
+            const rLerp = 1 - Math.pow(1 - 0.1, dtFactor);
+            bot.radius += (bot.targetRadius - bot.radius) * rLerp;
+            bot.visualRadius += (bot.radius - bot.visualRadius) * rLerp;
 
             // Optimización: No actualizar resortes en calidad baja
             if (!isLow && window.CONFIG && window.CONFIG.quality !== 'low') {
-                Player.updateSprings(bot);
+                Player.updateSprings(bot, dt);
             }
 
             bot.x = Math.max(bot.radius, Math.min(World.width - bot.radius, bot.x));
@@ -183,30 +185,34 @@ const Bots = {
         }
     },
 
-    think(bot, index, threshold) {
+    think(bot, index, threshold, dt = 16.6) {
+        const dtFactor = dt / 16.6;
         let forceX = 0, forceY = 0;
         const viewDist = bot.tier === "pro" ? 1100 : (bot.tier === "intermediate" ? 800 : 500);
 
-        bot.waver += 0.05;
+        bot.waver += 0.05 * dtFactor;
         const waverAmount = bot.tier === "pro" ? 0.05 : 0.15;
         forceX += Math.cos(bot.waver) * waverAmount;
         forceY += Math.sin(bot.waver) * waverAmount;
 
-        if (bot.tier !== "pro" && Math.random() < 0.1) {
+        if (bot.tier !== "pro" && Math.random() < 0.1 * dtFactor) {
             bot.tx += (Math.random() - 0.5) * 0.4;
             bot.ty += (Math.random() - 0.5) * 0.4;
         }
 
         let closestThreat = null;
         let minDistThreat = bot.tier === "novice" ? 300 : (bot.tier === "intermediate" ? 600 : 900);
-        const potentialThreats = [...Player.cells, ...this.items.filter((_, idx) => idx !== index)];
 
-        // Optimización: Evaluar amenazas solo si están cerca
-        for (let i = 0; i < potentialThreats.length; i++) {
-            const other = potentialThreats[i];
+        // Optimización con SpatialGrid para buscar amenazas y presas
+        const nearbyEntities = SpatialGrid.query(bot.x, bot.y, minDistThreat);
+
+        for (let i = 0; i < nearbyEntities.length; i++) {
+            const other = nearbyEntities[i];
+            if (other === bot) continue;
+
             const dx = bot.x - other.x, dy = bot.y - other.y;
-            const d2 = dx*dx + dy*dy;
-            if (d2 < minDistThreat * minDistThreat && other.mass > bot.mass * threshold) {
+            const d2 = dx * dx + dy * dy;
+            if (d2 < minDistThreat * minDistThreat && (other.mass || 0) > bot.mass * threshold) {
                 closestThreat = other;
                 minDistThreat = Math.sqrt(d2);
             }
@@ -226,7 +232,9 @@ const Bots = {
 
         if (bot.mass > 60) {
             const virusDist = bot.tier === "pro" ? 250 : 150;
-            for (const v of Virus.items) {
+            const nearbyViruses = SpatialGrid.query(bot.x, bot.y, bot.radius + virusDist);
+            for (const v of nearbyViruses) {
+                if (!v.spikes) continue; // No es virus
                 const dx = bot.x - v.x, dy = bot.y - v.y;
                 const d2 = dx*dx + dy*dy;
                 if (d2 < (bot.radius + virusDist) * (bot.radius + virusDist)) {
@@ -240,39 +248,41 @@ const Bots = {
         if (!closestThreat || (bot.tier === "pro" && minDistThreat > 350)) {
             let closestPrey = null;
             let minDistPrey = viewDist;
-            for (const other of potentialThreats) {
-                if (other.pursuerCount > 3) continue;
+            const nearbyPrey = SpatialGrid.query(bot.x, bot.y, viewDist);
+
+            for (const other of nearbyPrey) {
+                if (other === bot || (other.pursuerCount || 0) > 3) continue;
                 const dx = bot.x - other.x, dy = bot.y - other.y;
                 const d2 = dx*dx + dy*dy;
-                if (d2 < minDistPrey * minDistPrey && bot.mass > other.mass * threshold) {
+                if (d2 < minDistPrey * minDistPrey && bot.mass > (other.mass || 0) * threshold) {
                     closestPrey = other; minDistPrey = Math.sqrt(d2);
                 }
             }
 
-        if (closestPrey && bot.personality > 0.3) {
-            let targetX = closestPrey.x;
-            let targetY = closestPrey.y;
+            if (closestPrey && bot.personality > 0.3) {
+                let targetX = closestPrey.x;
+                let targetY = closestPrey.y;
 
-            // Parche de IA: Intercepción inteligente para rangos altos (Espectro y Deidad)
-            if (bot.rank.id === 'espectro' || bot.rank.id === 'deidad') {
-                targetX = closestPrey.x + (closestPrey.vx || 0) * 12;
-                targetY = closestPrey.y + (closestPrey.vy || 0) * 12;
-            }
+                if (bot.rank.id === 'espectro' || bot.rank.id === 'deidad') {
+                    targetX = closestPrey.x + (closestPrey.vx || 0) * 12;
+                    targetY = closestPrey.y + (closestPrey.vy || 0) * 12;
+                }
 
-            const dx = targetX - bot.x, dy = targetY - bot.y;
-            const d = Math.sqrt(dx*dx + dy*dy) || 1;
-            forceX += (dx / d) * 3; forceY += (dy / d) * 3;
+                const dx = targetX - bot.x, dy = targetY - bot.y;
+                const d = Math.sqrt(dx*dx + dy*dy) || 1;
+                forceX += (dx / d) * 3; forceY += (dy / d) * 3;
 
-            if (bot.tier === "pro" && bot.mass > 100 && bot.mass > closestPrey.mass * 2.3 && d < bot.radius * 4 && Math.random() < 0.08) {
-                this.botSplit(bot);
-            }
-        } else {
+                if (bot.tier === "pro" && bot.mass > 100 && bot.mass > closestPrey.mass * 2.3 && d < bot.radius * 4 && Math.random() < 0.08) {
+                    this.botSplit(bot);
+                }
+            } else {
                 let bestFood = null;
                 let minDistFood = 600;
-                // Muestreo agresivo de comida para rendimiento
-                const step = bot.tier === "novice" ? 4 : 8;
-                for (let k = 0; k < Food.items.length; k += step) {
-                    const f = Food.items[k];
+                const nearbyFood = SpatialGrid.query(bot.x, bot.y, 600);
+
+                for (let k = 0; k < nearbyFood.length; k++) {
+                    const f = nearbyFood[k];
+                    if (f.mass !== undefined || f.spikes !== undefined) continue; // No es comida
                     const dx = bot.x - f.x, dy = bot.y - f.y;
                     const d2 = dx*dx + dy*dy;
                     if (d2 < minDistFood * minDistFood) {
@@ -299,69 +309,69 @@ const Bots = {
         }
     },
 
-    handleCollisions(bot, i, threshold) {
-        // Optimización: Solo comer comida si estamos cerca (Culling espacial implícito)
-        // Usamos un step mayor para la comida para no chequear cada partícula cada frame para cada bot
-        const step = (window.CONFIG && window.CONFIG.quality === 'low') ? 2 : 1;
+    handleCollisions(bot, i, threshold, dt = 16.6) {
+        const dtFactor = dt / 16.6;
+        const nearbyEntities = SpatialGrid.query(bot.x, bot.y, bot.radius + 50);
 
-        for (let k = Food.items.length - 1; k >= 0; k -= step) {
-            const f = Food.items[k];
-            const dx = bot.x - f.x, dy = bot.y - f.y;
-            const distSq = dx*dx + dy*dy;
-            if (distSq < bot.radius * bot.radius) {
-                bot.mass += (f.ejected ? 3 : 1);
-                bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
-                Food.items.splice(k, 1);
-                Food.recycle(f);
-            }
-        }
+        for (let k = 0; k < nearbyEntities.length; k++) {
+            const other = nearbyEntities[k];
+            if (other === bot) continue;
 
-        // 2. Colisión con Virus
-        for (const v of Virus.items) {
-            const dx = bot.x - v.x, dy = bot.y - v.y;
-            const distSq = dx*dx + dy*dy;
-            if (distSq < bot.radius * bot.radius && bot.mass > v.radius * 1.1) {
-                bot.mass *= 0.5;
-                bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
-                const angle = Math.random() * Math.PI * 2;
-                bot.vx += Math.cos(angle) * 20;
-                bot.vy += Math.sin(angle) * 20;
-                v.x = Math.random() * World.width;
-                v.y = Math.random() * World.height;
-            }
-        }
-
-        // 3. Comer otros bots
-        for (let j = 0; j < this.items.length; j++) {
-            if (i === j) continue;
-            const other = this.items[j];
             const dx = bot.x - other.x, dy = bot.y - other.y;
-            const distSq = dx*dx + dy*dy;
-            const sumR = bot.radius + other.radius;
+            const d2 = dx * dx + dy * dy;
 
-            if (distSq < sumR * sumR) {
-                const dist = Math.sqrt(distSq) || 1;
-                const massDiff = 1.11;
-
-                if (bot.mass > other.mass * massDiff && dist < bot.radius - other.radius * 0.39) {
-                    bot.mass += other.mass * 0.85;
+            // 1. Colisión con Comida
+            if (other.radius && other.mass === undefined && other.spikes === undefined) {
+                if (d2 < bot.radius * bot.radius) {
+                    bot.mass += (other.ejected ? 3 : 1);
                     bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
-                    // MÓDULO 2: LIMPIEZA INMEDIATA DE MEMORIA
-                    this.items.splice(j, 1);
-                    if (j < i) i--;
-                    setTimeout(() => {
-                        if (this.items.length < 50) this.items.push(this.createBot());
-                    }, 2000);
+                    const foodIdx = Food.items.indexOf(other);
+                    if (foodIdx !== -1) {
+                        Food.items.splice(foodIdx, 1);
+                        Food.recycle(other);
+                    }
                 }
-                else if (other.mass > bot.mass * massDiff && dist < other.radius - bot.radius * 0.39) {
-                    other.mass += bot.mass * 0.85;
-                    other.targetRadius = 30 * Math.sqrt(other.mass / 30);
-                    // MÓDULO 2: LIMPIEZA INMEDIATA DE MEMORIA
-                    this.items.splice(i, 1);
-                    setTimeout(() => {
-                        if (this.items.length < 50) this.items.push(this.createBot());
-                    }, 2000);
-                    return;
+                continue;
+            }
+
+            // 2. Colisión con Virus
+            if (other.spikes) {
+                if (d2 < bot.radius * bot.radius && bot.mass > other.radius * 1.1) {
+                    bot.mass *= 0.5;
+                    bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
+                    const angle = Math.random() * Math.PI * 2;
+                    bot.vx += Math.cos(angle) * 20;
+                    bot.vy += Math.sin(angle) * 20;
+                    other.x = Math.random() * World.width;
+                    other.y = Math.random() * World.height;
+                }
+                continue;
+            }
+
+            // 3. Comer otros bots o ser comido por el jugador
+            if (other.mass !== undefined) {
+                const sumR = bot.radius + other.radius;
+                if (d2 < sumR * sumR) {
+                    const dist = Math.sqrt(d2) || 1;
+                    const massDiff = 1.11;
+
+                    if (bot.mass > other.mass * massDiff && dist < bot.radius - other.radius * 0.39) {
+                        if (other.type === 'player') {
+                            // Si el bot come al jugador, el jugador maneja su muerte en su update
+                            // pero aquí podemos dar feedback visual
+                        } else {
+                            bot.mass += other.mass * 0.85;
+                            bot.targetRadius = 30 * Math.sqrt(bot.mass / 30);
+                            const botIdx = this.items.indexOf(other);
+                            if (botIdx !== -1) {
+                                this.items.splice(botIdx, 1);
+                                if (botIdx < i) i--;
+                                setTimeout(() => {
+                                    if (this.items.length < 50) this.items.push(this.createBot());
+                                }, 2000);
+                            }
+                        }
+                    }
                 }
             }
         }
