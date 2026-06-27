@@ -36,7 +36,12 @@ const Updater = {
         this.isChecking = true;
 
         try {
-            const response = await fetch(COMMITS_URL, { cache: "no-store" });
+            // ELIMINACIÓN DE CACHÉ DE PETICIÓN (ANTI-STALLING)
+            const antiCacheUrl = `${COMMITS_URL}&_nocache=${Date.now()}`;
+            const response = await fetch(antiCacheUrl, {
+                headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+            });
+
             if (!response.ok) throw new Error("GitHub API Offline");
 
             const data = await response.json();
@@ -44,17 +49,22 @@ const Updater = {
 
             const remoteDate = data[0].commit.committer.date;
             const commitMessage = data[0].commit.message;
-            const localDate = localStorage.getItem("LAST_DEPLOY_DATE") || window.CURRENT_BUILD_DATE;
 
-            console.log(`[Updater] Local: ${localDate} | Remote: ${remoteDate}`);
+            // CONVERSIÓN DE FECHAS A NÚMEROS (PARSEO OBLIGATORIO)
+            const remoteTimestamp = new Date(remoteDate).getTime();
+            const localBuildTimestamp = new Date(window.CURRENT_BUILD_DATE).getTime();
+            const lastDeployTimestamp = parseInt(localStorage.getItem("LAST_DEPLOY_TIMESTAMP") || 0);
 
-            // Comparación directa de strings ISO
-            if (remoteDate > localDate) {
+            // LÓGICA DE DETECCIÓN MATEMÁTICA INFALIBLE
+            const currentLocalTimestamp = Math.max(localBuildTimestamp, lastDeployTimestamp);
+
+            // CONSOLE.LOGS DE DIAGNÓSTICO (MODO DEBUG)
+            console.log(`[Nexus Debug] Local Timestamp: ${currentLocalTimestamp} | Remote Timestamp: ${remoteTimestamp}`);
+
+            if (remoteTimestamp > currentLocalTimestamp) {
                 console.log("[Updater] Nueva implementación detectada en el repositorio.");
                 this.isUpdateFound = true;
-                this.showUpdateModal(remoteDate, commitMessage);
-            } else {
-                localStorage.setItem("LAST_DEPLOY_DATE", localDate);
+                this.showUpdateModal(remoteTimestamp, commitMessage);
             }
         } catch (error) {
             console.warn("[Updater] Fallo en sincronización:", error.message);
@@ -63,7 +73,7 @@ const Updater = {
         }
     },
 
-    showUpdateModal: function(remoteDate, message) {
+    showUpdateModal: function(remoteTimestamp, message) {
         if (window.Engine) window.Engine.isPaused = true;
         if (document.getElementById('updateOverlay')) return;
 
@@ -71,7 +81,7 @@ const Updater = {
         modal.id = 'updateOverlay';
         modal.className = 'cyber-modal-full';
 
-        const dateObj = new Date(remoteDate);
+        const dateObj = new Date(remoteTimestamp);
         const displayDate = dateObj.toLocaleDateString() + " " + dateObj.toLocaleTimeString();
 
         modal.innerHTML = `
@@ -94,7 +104,8 @@ const Updater = {
         document.body.appendChild(modal);
 
         document.getElementById('btnInstallUpdate').onclick = () => {
-            localStorage.setItem("LAST_DEPLOY_DATE", remoteDate);
+            // ACTUALIZACIÓN CORRECTA DEL STORAGE
+            localStorage.setItem("LAST_DEPLOY_TIMESTAMP", remoteTimestamp);
             window.location.reload(true);
         };
 
@@ -152,7 +163,7 @@ const Updater = {
  * MOTOR DE NOTIFICACIONES LOCALES (RETENCIÓN Y DOPAMINA)
  */
 const NotificationEngine = {
-    inactivityTimer: null,
+    inactivityTimers: [],
 
     init: function() {
         if (!("Notification" in window)) return;
@@ -191,17 +202,32 @@ const NotificationEngine = {
     setupRetentionListeners: function() {
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "hidden") {
-                this.inactivityTimer = setTimeout(() => {
-                    this.dispatch(
-                        "⚔️ [ALERTA DE SISTEMA] // SECTOR VULNERABLE",
-                        "Los bots están dominando el servidor. Tu rango está en riesgo, regresa a la batalla."
-                    );
-                }, 86400000);
+                const retentionAlerts = [
+                    {
+                        t: 600000,
+                        title: "📡 [SEÑAL ENTRANTE] // INTRUSIÓN EN TU SECTOR",
+                        msg: "Varios usuarios acaban de entrar a tu zona de extracción. Regresa antes de que limpien el servidor y se lleven tus Slip Coins."
+                    },
+                    {
+                        t: 7200000,
+                        title: "🔋 [NEXUS CORE] // CONEXIÓN RESTABLECIDA",
+                        msg: "La actividad en el servidor está al máximo. Hay rivales reclamando el top del ranking ahora mismo, Overlord. Entra a reclamar lo tuyo."
+                    },
+                    {
+                        t: 28800000,
+                        title: "⚠️ [ALERTA DE RANGO] // AMENAZA DE DERROTA",
+                        msg: "Tu posición en el servidor está siendo comprometida por usuarios de élite. Regresa a la batalla y defiende tu estatus."
+                    }
+                ];
+
+                retentionAlerts.forEach(alert => {
+                    this.inactivityTimers.push(setTimeout(() => {
+                        this.dispatch(alert.title, alert.msg);
+                    }, alert.t));
+                });
             } else {
-                if (this.inactivityTimer) {
-                    clearTimeout(this.inactivityTimer);
-                    this.inactivityTimer = null;
-                }
+                this.inactivityTimers.forEach(timer => clearTimeout(timer));
+                this.inactivityTimers = [];
                 localStorage.removeItem("CHEST_NOTIFIED");
             }
         });
