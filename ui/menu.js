@@ -1,5 +1,5 @@
 ﻿var Menu = {
-    STATES: { MENU: 'ESTADO_MENU', TIENDA: 'ESTADO_TIENDA', JUEGO: 'ESTADO_JUEGO', PAUSA: 'ESTADO_PAUSA', MUERTE: 'ESTADO_GAME_OVER', PERFIL: 'ESTADO_PERFIL' },
+    STATES: { MENU: 'ESTADO_MENU', TIENDA: 'ESTADO_TIENDA', JUEGO: 'ESTADO_JUEGO', PAUSA: 'ESTADO_PAUSA', MUERTE: 'ESTADO_GAME_OVER', PERFIL: 'ESTADO_PERFIL', SOCIAL: 'ESTADO_SOCIAL' },
     currentState: '',
     previousState: '',
     currentSkin: '',
@@ -52,7 +52,7 @@
         window.Menu = this;
         console.log("Slip Game: Inicializando Menú...");
 
-        const screens = ['menu', 'shopModal', 'pauseModal', 'gameOverScreen', 'profileModal', 'settingsModal', 'lanModal', 'missionsModal', 'dailyChest', 'levelUpModal', 'leaderboardModal', 'slipPassModal'];
+        const screens = ['menu', 'shopModal', 'pauseModal', 'gameOverScreen', 'profileModal', 'settingsModal', 'lanModal', 'missionsModal', 'dailyChest', 'levelUpModal', 'leaderboardModal', 'slipPassModal', 'socialModal'];
         screens.forEach(id => {
             const el = document.getElementById(id);
             if(el) {
@@ -80,11 +80,18 @@
         };
 
         bind('playButton', () => this.startGame());
-        bind('shopBtn', () => this.switchState(this.STATES.TIENDA));
+        bind('shopBtn', () => {
+            this.switchState(this.STATES.TIENDA);
+            if (window.AudioManager) window.AudioManager.startShopMusic();
+        });
         bind('closeShop', () => {
             const mainView = document.getElementById('shopMainView');
             if (mainView && mainView.classList.contains('active')) {
                 this.switchState(this.STATES.MENU);
+                if (window.AudioManager) {
+                    window.AudioManager.playCloseMenu();
+                    window.AudioManager.startMenuMusic();
+                }
             } else {
                 this.openShopMain();
             }
@@ -99,6 +106,7 @@
         bind('closeProfile', () => {
             console.log("Slip Game: Cerrando Perfil...");
             this.switchState(this.STATES.MENU);
+            if (window.AudioManager) window.AudioManager.playCloseMenu();
         });
         bind('goToSkinsFromProfile', () => this.switchState(this.STATES.TIENDA));
 
@@ -106,19 +114,32 @@
         bind('closeSettings', () => {
             if (this.previousState === this.STATES.PAUSA) this.switchState(this.STATES.PAUSA);
             else this.switchState(this.STATES.MENU);
+            if (window.AudioManager) window.AudioManager.playCloseMenu();
         });
 
         bind('missionsBtn', () => {
             this.switchState('ESTADO_MISIONES');
             if (window.Engine) window.Engine.renderMissions();
         });
-        bind('closeMissions', () => this.switchState(this.STATES.MENU));
+        bind('closeMissions', () => {
+            this.switchState(this.STATES.MENU);
+            if (window.AudioManager) window.AudioManager.playCloseMenu();
+        });
 
         bind('lanBtn', () => this.switchState('ESTADO_LAN'));
-        bind('closeLan', () => this.switchState(this.STATES.MENU));
+        bind('closeLan', () => {
+            this.switchState(this.STATES.MENU);
+            if (window.AudioManager) window.AudioManager.playCloseMenu();
+        });
 
-        bind('freeCoinsBtn', () => { if (window.Engine) window.Engine.checkDailyReward(true); });
-        bind('closeChest', () => this.switchState(this.STATES.MENU));
+        bind('freeCoinsBtn', () => {
+            if (window.Engine) window.Engine.checkDailyReward(true);
+            if (window.AudioManager) window.AudioManager.playDailyChest();
+        });
+        bind('closeChest', () => {
+            this.switchState(this.STATES.MENU);
+            if (window.AudioManager) window.AudioManager.playCloseMenu();
+        });
         bind('chestBox', () => {
             const userId = this.user ? this.user.id : 'guest';
             localStorage.setItem(`lastClaimDate_${userId}`, new Date().toDateString());
@@ -135,10 +156,19 @@
         });
 
         bind('globalLbBtn', () => this.switchState('ESTADO_GLOBAL'));
-        bind('closeLeaderboard', () => this.switchState(this.STATES.MENU));
+        bind('closeLeaderboard', () => {
+            this.switchState(this.STATES.MENU);
+            if (window.AudioManager) window.AudioManager.playCloseMenu();
+        });
 
-        bind('slipPassBtn', () => this.switchState('ESTADO_PASS'));
-        bind('closePass', () => this.switchState(this.STATES.MENU));
+        bind('slipPassBtn', () => {
+            this.switchState('ESTADO_PASS');
+            if (window.AudioManager) window.AudioManager.playSlipPass();
+        });
+        bind('closePass', () => {
+            this.switchState(this.STATES.MENU);
+            if (window.AudioManager) window.AudioManager.playCloseMenu();
+        });
 
         bind('muteBtn', () => {
             const muted = window.AudioManager.toggleMute();
@@ -166,6 +196,18 @@
         if (menuTopLeft) menuTopLeft.appendChild(socialBtn);
 
         bind('socialBtn', () => this.openSocialModal());
+        bind('closeSocial', () => {
+            this.switchState(this.STATES.MENU);
+            if (window.AudioManager) window.AudioManager.playCloseMenu();
+        });
+        bind('shareCodeBtn', () => {
+            const referralCode = this.user.id.substring(0, 6).toUpperCase();
+            if (window.AndroidBridge) window.AndroidBridge.shareGame(referralCode);
+        });
+        bind('enterCodeBtn', () => {
+            const code = prompt("Introduce el código de un amigo:");
+            if (code && code.length >= 5) this.addReferralReward(code);
+        });
 
         // Ajustes de Calidad y Control
         document.querySelectorAll('.g-btn').forEach(btn => {
@@ -221,18 +263,38 @@
             const modal = document.getElementById('alertModal');
             if (modal) {
                 modal.classList.remove('is-open');
-                setTimeout(() => { modal.style.display = 'none'; }, 300);
+                const ticket = Math.random();
+                modal.dataset.lastTicket = ticket;
+                setTimeout(() => {
+                    if (modal.dataset.lastTicket == ticket && !modal.classList.contains('is-open')) {
+                        modal.style.display = 'none';
+                    }
+                }, 300);
             }
-            if (this._alertCallback) this._alertCallback();
+            if (this._alertCallback) {
+                const cb = this._alertCallback;
+                this._alertCallback = null;
+                cb();
+            }
         });
 
         bind('alertSecondaryBtn', () => {
             const modal = document.getElementById('alertModal');
             if (modal) {
                 modal.classList.remove('is-open');
-                setTimeout(() => { modal.style.display = 'none'; }, 300);
+                const ticket = Math.random();
+                modal.dataset.lastTicket = ticket;
+                setTimeout(() => {
+                    if (modal.dataset.lastTicket == ticket && !modal.classList.contains('is-open')) {
+                        modal.style.display = 'none';
+                    }
+                }, 300);
             }
-            if (this._alertSecondaryCallback) this._alertSecondaryCallback();
+            if (this._alertSecondaryCallback) {
+                const cb = this._alertSecondaryCallback;
+                this._alertSecondaryCallback = null;
+                cb();
+            }
         });
 
         bind('btnEmote', () => this.toggleEmotePicker());
@@ -679,6 +741,7 @@
                         this.currentSkin = key;
                         this.updateMenuUI();
                         this.renderSkinList();
+                        if (window.AudioManager) window.AudioManager.playEquipSkin();
                     }
                 } else if (locked) {
                     this.showAlert("PROTOCOLO BLOQUEADO", s.req || `Alcanza el nivel ${s.level} para desbloquear este aspecto.`, "🔒");
@@ -734,6 +797,7 @@
         this._alertSecondaryCallback = onSecondary;
 
         modal.style.display = 'flex';
+        modal.dataset.lastTicket = "active";
         setTimeout(() => modal.classList.add('is-open'), 50);
     },
 
@@ -758,7 +822,7 @@
                 this.updateShopCurrencies();
                 this.syncCloud();
 
-                if (window.AudioManager) window.AudioManager.playBuy();
+                if (window.AudioManager) window.AudioManager.playBuySkin();
                 this.showAlert("¡COMPRA EXITOSA!", `Aspecto ${s.name} equipado.`, "✨");
             }, () => {}, Localization.get("buy"), Localization.get("cancel"));
         } else {
@@ -924,27 +988,43 @@
             return;
         }
 
+        const userId = this.user ? this.user.id : 'guest';
+        const unlockedEffects = JSON.parse(localStorage.getItem('slip_unlocked_effects') || "[]");
+        const unlockedEmotes = JSON.parse(localStorage.getItem(`unlockedEmotes_${userId}`) || "[]");
+
         grid.innerHTML = (cat === 'coins' ? `
             <div style="grid-column: 1/-1; background: linear-gradient(90deg, #facc1522, transparent); padding: 15px; border-left: 4px solid #facc15; margin-bottom: 10px; border-radius: 0 15px 15px 0;">
                 <div style="font-weight: 950; color: #facc15; font-size: 0.9rem; letter-spacing: 1px;">¿CANSADO DE FARMEAR?</div>
                 <div style="font-size: 0.7rem; color: #fff; opacity: 0.8; margin-top: 5px; font-weight: 700;">Salta el progreso lento y desbloquea todo el contenido Premium al instante.</div>
             </div>
         ` : '') + items.map(item => {
+            const r = item.reward;
+            let isOwned = false;
+            if (r) {
+                if (r.type === 'unlock_effect') isOwned = unlockedEffects.includes(r.value);
+                if (r.type === 'unlock_emote') isOwned = unlockedEmotes.includes(r.value);
+            }
+
             let btnContent = `${item.type === 'coins' ? '💰' : (item.type === 'dna' ? '🧬' : 'USD ')} ${item.price}`;
             let btnColor = '#3b82f6';
+            let onclick = `Menu.buyItem('${cat}', '${item.id}')`;
 
-            if (item.type === 'usd') {
+            if (isOwned) {
+                btnContent = "ADQUIRIDO";
+                btnColor = "#22c55e";
+                onclick = "";
+            } else if (item.type === 'usd') {
                 btnContent = `COMPRAR $${item.price}`;
                 btnColor = 'linear-gradient(135deg, #22c55e, #16a34a)';
             }
 
             return `
-            <div class="skin-card" style="overflow: visible;">
+            <div class="skin-card" style="overflow: visible; opacity: ${isOwned ? '0.8' : '1'}">
                 ${item.tag ? `<div style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 950; padding: 4px 8px; border-radius: 8px; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); animation: pulse 2s infinite;">${item.tag}</div>` : ''}
                 <div style="font-size:2.5rem; margin-bottom:15px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));">${item.icon}</div>
                 <div style="font-weight:900; font-size:0.75rem; color:#fff; text-transform:uppercase; text-align:center;">${item.name}</div>
                 <div style="font-size:0.6rem; color:#94a3b8; margin:10px 0; height:32px; text-align:center; line-height:1.2;">${item.desc}</div>
-                <button class="item-price-btn" style="background:${btnColor}; border:none; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onclick="Menu.buyItem('${cat}', '${item.id}')">
+                <button class="item-price-btn" style="background:${btnColor}; border:none; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: ${isOwned ? 'default' : 'pointer'}" ${onclick ? `onclick="${onclick}"` : ''}>
                     ${btnContent}
                 </button>
             </div>
@@ -1018,7 +1098,10 @@
                 }
 
                 this.showAlert("¡ITEM ADQUIRIDO!", `${item.name} ha sido añadido a tu inventario.`, "✅");
-                if (window.AudioManager) window.AudioManager.playBuy();
+                if (window.AudioManager) {
+                    if (cat === 'evolution' || cat === 'potions') window.AudioManager.playUpgrade();
+                    else window.AudioManager.playClick();
+                }
                 this.updateMenuUI();
                 this.renderShopItems(cat);
             }, () => {}, confirmBtn, "CANCELAR");
@@ -1078,6 +1161,7 @@
             const v = document.getElementById('shopItemsView');
             if(v) v.classList.add('active');
             title.innerText = "EVOLUCIÓN";
+            if (window.AudioManager) window.AudioManager.playExclusiveMenu();
             // Forzar renderizado inmediato del laboratorio
             if (window.EvolutionLab) {
                 window.EvolutionLab.renderLab();
@@ -1105,7 +1189,7 @@
         this.previousState = this.currentState;
         this.currentState = s;
 
-        const screens = ['menu', 'shopModal', 'pauseModal', 'gameOverScreen', 'profileModal', 'settingsModal', 'lanModal', 'missionsModal', 'dailyChest', 'levelUpModal', 'leaderboardModal', 'slipPassModal'];
+        const screens = ['menu', 'shopModal', 'pauseModal', 'gameOverScreen', 'profileModal', 'settingsModal', 'lanModal', 'missionsModal', 'dailyChest', 'levelUpModal', 'leaderboardModal', 'slipPassModal', 'socialModal'];
         const target = this.getScreenIdFromState(s);
         const isModal = ['shopModal', 'profileModal', 'settingsModal', 'lanModal', 'missionsModal', 'dailyChest', 'levelUpModal', 'leaderboardModal', 'slipPassModal'].includes(target);
 
@@ -1155,12 +1239,12 @@
     },
 
     getScreenIdFromState(s) {
-        const map = { [this.STATES.MENU]: 'menu', [this.STATES.TIENDA]: 'shopModal', [this.STATES.PAUSA]: 'pauseModal', [this.STATES.MUERTE]: 'gameOverScreen', [this.STATES.PERFIL]: 'profileModal', 'ESTADO_AJUSTES': 'settingsModal', 'ESTADO_LAN': 'lanModal', 'ESTADO_MISIONES': 'missionsModal', 'ESTADO_REGALO': 'dailyChest', 'ESTADO_GLOBAL': 'leaderboardModal', 'ESTADO_PASS': 'slipPassModal' };
+        const map = { [this.STATES.MENU]: 'menu', [this.STATES.TIENDA]: 'shopModal', [this.STATES.PAUSA]: 'pauseModal', [this.STATES.MUERTE]: 'gameOverScreen', [this.STATES.PERFIL]: 'profileModal', 'ESTADO_AJUSTES': 'settingsModal', 'ESTADO_LAN': 'lanModal', 'ESTADO_MISIONES': 'missionsModal', 'ESTADO_REGALO': 'dailyChest', 'ESTADO_GLOBAL': 'leaderboardModal', 'ESTADO_PASS': 'slipPassModal', [this.STATES.SOCIAL]: 'socialModal' };
         return map[s];
     },
 
     getStateFromScreenId(id) {
-        const map = { 'menu': this.STATES.MENU, 'shopModal': this.STATES.TIENDA, 'pauseModal': this.STATES.PAUSA, 'gameOverScreen': this.STATES.MUERTE, 'profileModal': this.STATES.PERFIL, 'settingsModal': 'ESTADO_AJUSTES', 'lanModal': 'ESTADO_LAN', 'missionsModal': 'ESTADO_MISIONES', 'dailyChest': 'ESTADO_REGALO', 'leaderboardModal': 'ESTADO_GLOBAL', 'slipPassModal': 'ESTADO_PASS' };
+        const map = { 'menu': this.STATES.MENU, 'shopModal': this.STATES.TIENDA, 'pauseModal': this.STATES.PAUSA, 'gameOverScreen': this.STATES.MUERTE, 'profileModal': this.STATES.PERFIL, 'settingsModal': 'ESTADO_AJUSTES', 'lanModal': 'ESTADO_LAN', 'missionsModal': 'ESTADO_MISIONES', 'dailyChest': 'ESTADO_REGALO', 'leaderboardModal': 'ESTADO_GLOBAL', 'slipPassModal': 'ESTADO_PASS', 'socialModal': this.STATES.SOCIAL };
         return map[id];
     },
 
@@ -1346,23 +1430,10 @@
     },
 
     openSocialModal() {
+        this.switchState(this.STATES.SOCIAL);
         const referralCode = this.user.id.substring(0, 6).toUpperCase();
-        this.showAlert(
-            "SISTEMA SOCIAL",
-            `Comparte tu código con amigos para ganar ADN y Skins Exclusivas.\n\nTU CÓDIGO: ${referralCode}`,
-            "🤝",
-            () => {
-                if (window.AndroidBridge) window.AndroidBridge.shareGame(referralCode);
-            },
-            () => {
-                const code = prompt("Introduce el código de un amigo:");
-                if (code && code.length >= 5) {
-                    this.addReferralReward(code);
-                }
-            },
-            "INVITAR AMIGOS",
-            "PONER CÓDIGO"
-        );
+        const codeDisp = document.getElementById('referralCodeDisplay');
+        if (codeDisp) codeDisp.innerText = referralCode;
     },
 
     addReferralReward(code) {
@@ -1452,7 +1523,7 @@
                 purchased.push(rewardSkin.id);
                 localStorage.setItem(`purchasedSkins_${userId}`, JSON.stringify(purchased));
 
-                if (window.AudioManager) window.AudioManager.playBuy();
+                if (window.AudioManager) window.AudioManager.playBuySkin();
 
                 if (window.VisualEffects && window.VisualEffects.createShockwave) {
                     window.VisualEffects.createShockwave(window.innerWidth/2, window.innerHeight/2);

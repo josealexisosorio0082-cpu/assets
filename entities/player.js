@@ -130,7 +130,10 @@ const Player = {
                 if (window.VisualEffects.createShockwave) window.VisualEffects.createShockwave(cell.x, cell.y);
             }
         }
-        if (window.AudioManager) window.AudioManager.playSplit();
+        if (window.AudioManager) {
+            window.AudioManager.playSplit();
+            window.AudioManager.startMergingMusic();
+        }
         this.cells = newCells;
     },
 
@@ -139,12 +142,15 @@ const Player = {
         const mx = window.mouse.targetX - window.innerWidth/2, my = window.mouse.targetY - window.innerHeight/2;
         const d = Math.hypot(mx, my) || 1;
         const dx = mx / d, dy = my / d;
+        let ejected = false;
         for (const cell of this.cells) {
             if (cell.mass < 35) continue;
             cell.mass -= 8;
             cell.targetRadius = 30 * Math.sqrt(cell.mass / 30);
             Food.addEjectedMass(cell.x + dx * (cell.radius + 10), cell.y + dy * (cell.radius + 10), dx*18, dy*18, cell, 8);
+            ejected = true;
         }
+        if (ejected && window.AudioManager) window.AudioManager.playEject();
     },
 
     onEatenBy(attacker) {
@@ -208,6 +214,10 @@ const Player = {
                         cell.targetRadius = 30 * Math.sqrt(cell.mass / 30);
                         this.cells.splice(j, 1); j--;
                         if (window.VisualEffects) window.VisualEffects.createExplosion(cell.x, cell.y, "#fff", 5);
+                        if (window.AudioManager) {
+                            window.AudioManager.playMerge();
+                            if (this.cells.length <= 1) window.AudioManager.stopBGM(); // Para el loop de unión
+                        }
                     } else {
                         // Empuje físico firme ("Pared") solo entre células propias
                         const overlap = (minD - d);

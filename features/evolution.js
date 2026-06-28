@@ -25,7 +25,8 @@ const EvolutionLab = {
         const data = this.getUpgradeData();
         const up = this.upgrades[type];
         if (data[type] >= up.maxLevel) {
-            alert("Nivel máximo alcanzado");
+            if (window.Menu) window.Menu.showAlert("NIVEL MÁXIMO", "Ya has alcanzado el límite para esta mejora.", "⭐");
+            else alert("Nivel máximo alcanzado");
             return;
         }
 
@@ -33,16 +34,36 @@ const EvolutionLab = {
         const balance = parseInt(localStorage.getItem(up.currency === 'coins' ? 'slipCoins' : 'slipDna') || 0);
 
         if (balance >= cost) {
-            if (confirm(`¿Mejorar ${up.name} al nivel ${data[type] + 1} por ${cost} ${up.currency === 'coins' ? 'Monedas' : 'ADN'}?`)) {
-                if (up.currency === 'coins') window.Engine.addCoins(-cost);
-                else window.Engine.addDna(-cost);
+            const msg = `¿Mejorar ${up.name} al nivel ${data[type] + 1} por ${cost} ${up.currency === 'coins' ? 'Monedas' : 'ADN'}?`;
 
-                data[type]++;
-                this.saveUpgradeData(data);
-                this.renderLab();
+            if (window.Menu) {
+                window.Menu.showAlert("CONFIRMAR MEJORA", msg, up.icon, () => {
+                    if (up.currency === 'coins') window.Engine.addCoins(-cost);
+                    else window.Engine.addDna(-cost);
+
+                    data[type]++;
+                    this.saveUpgradeData(data);
+                    this.renderLab();
+                }, () => {}, "MEJORAR", "CANCELAR");
+            } else {
+                if (confirm(msg)) {
+                    if (up.currency === 'coins') window.Engine.addCoins(-cost);
+                    else window.Engine.addDna(-cost);
+                    data[type]++;
+                    this.saveUpgradeData(data);
+                    this.renderLab();
+                }
             }
         } else {
-            alert("No tienes suficientes recursos");
+            const missing = cost - balance;
+            const currencyName = up.currency === 'coins' ? 'Monedas' : 'ADN';
+            if (window.Menu) {
+                window.Menu.showAlert("RECURSOS INSUFICIENTES", `Te faltan ${missing} ${currencyName} para esta mejora galáctica.`, "💰", () => {
+                    window.Menu.openShopCategory(up.currency === 'coins' ? 'coins' : 'dna');
+                }, () => {}, "RECARGAR", "CERRAR");
+            } else {
+                alert("No tienes suficientes recursos");
+            }
         }
     },
 

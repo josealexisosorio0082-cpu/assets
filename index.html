@@ -47,7 +47,7 @@
                 <div id="rankNameDisplay" style="font-size: 7px; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-bottom: 1px;">V</div>
                 <div class="profile-xp-bar"><div id="profileXPFill"></div></div>
             </div>
-            <img id="userAvatar" src="ui/images/skins gratis/boom.png" alt="Avatar">
+            <img id="userAvatar" src="ui/images/skins%20gratis/boom.png" alt="Avatar">
         </div>
     </div>
 
@@ -146,7 +146,7 @@
             </div>
             <div class="header-center">
                 <div class="avatar-container-new">
-                    <img id="profileAvatarLarge" src="ui/images/skins gratis/boom.png" class="avatar-img-new">
+                    <img id="profileAvatarLarge" src="ui/images/skins%20gratis/boom.png" class="avatar-img-new">
                     <div class="edit-badge-new">✎</div>
                 </div>
             </div>
@@ -395,6 +395,26 @@
             <button id="btnEmote" class="touch-btn" style="background: rgba(59, 130, 246, 0.5);"><div class="p-icon" id="icon_emote"></div></button>
             <button id="btnSplit" class="touch-btn"><div class="p-icon" id="icon_split"></div></button>
             <button id="btnEject" class="touch-btn"><div class="p-icon" id="icon_eject"></div></button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Social -->
+<div id="socialModal" class="ui-screen">
+    <div class="modal-content" style="max-width: 380px; border-color: #8b5cf6;">
+        <div id="closeSocial" class="back-btn-circle">✖</div>
+        <h2 class="modal-title">Sistema Social</h2>
+        <div style="font-size: 3.5rem; margin-bottom: 20px;">🤝</div>
+        <div style="background: rgba(139, 92, 246, 0.1); padding: 20px; border-radius: 20px; border: 1.5px solid rgba(139, 92, 246, 0.3); margin-bottom: 20px; width: 100%;">
+            <div style="font-size: 0.7rem; font-weight: 900; color: #8b5cf6; margin-bottom: 8px; text-transform: uppercase;">Tu Código de Referido</div>
+            <div id="referralCodeDisplay" style="font-size: 2.2rem; font-weight: 950; color: #fff; letter-spacing: 5px;">------</div>
+        </div>
+        <p style="font-weight: 700; color: #94a3b8; margin-bottom: 30px; line-height: 1.4; font-size: 0.8rem;">
+            Comparte tu código con amigos para ganar ADN y Skins Exclusivas.
+        </p>
+        <div class="action-grid" style="grid-template-columns: 1fr; gap: 12px; width: 100%;">
+            <button id="shareCodeBtn" class="btn-blue" style="height: 55px;">INVITAR AMIGOS</button>
+            <button id="enterCodeBtn" class="btn-gray">CANJEAR CÓDIGO</button>
         </div>
     </div>
 </div>

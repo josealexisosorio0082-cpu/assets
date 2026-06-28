@@ -390,6 +390,7 @@ var Engine = {
         let current = parseInt(localStorage.getItem('slipCoins') || 0);
         current += amount;
         localStorage.setItem('slipCoins', current);
+        if (amount > 0 && window.AudioManager) window.AudioManager.playCoin();
         if (window.Menu) {
             window.Menu.updateMenuUI();
             window.Menu.syncCloud();
@@ -422,6 +423,7 @@ var Engine = {
             else m.progress += value;
             if (m.progress >= m.goal) {
                 m.done = true;
+                if (window.AudioManager) window.AudioManager.playMissionReward();
 
                 // MÓDULO ECONÓMICO: Bonus de Banquero Overlord
                 const evoData = window.EvolutionLab ? window.EvolutionLab.getUpgradeData() : { banker: 0 };

@@ -22,12 +22,12 @@ canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; pointe
 .ui-screen.is-open { display: flex; opacity: 1; }
 
 #loadingOverlay {
-    background: #000 url("ui/images/extras del juego/Portada de carga antes de entrar al menu principal.png") no-repeat center center;
+    background: #0a0a0f url("ui/images/extras%20del%20juego/Portada%20de%20carga%20antes%20de%20entrar%20al%20menu%20principal.png") no-repeat center center;
     background-size: cover; z-index: 10000; flex-direction: column; justify-content: flex-end; padding-bottom: 100px;
     backdrop-filter: none;
 }
 #menu {
-    background: #000 url("ui/images/extras del juego/Fondo del menu del juego.png") no-repeat center center;
+    background: #0a0a0f url("ui/images/extras%20del%20juego/Fondo%20del%20menu%20del%20juego.png") no-repeat center center;
     background-size: cover;
     backdrop-filter: none;
 }
