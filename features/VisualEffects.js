@@ -40,12 +40,22 @@
         const isLow = q === 'low';
         const dtFactor = dt / 16.6;
 
+        // Optimización de limpieza de partículas
+        if (this.particles.length > this.maxParticles) {
+            this.particles.splice(0, this.particles.length - this.maxParticles);
+        }
+
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
             p.x += p.vx * dtFactor; p.y += p.vy * dtFactor;
-            p.opacity -= (isLow ? 0.1 : 0.05) * dtFactor;
-            if (p.opacity <= 0 || p.dead) this.particles.splice(i, 1);
+            p.opacity -= (isLow ? 0.08 : 0.04) * dtFactor;
+            if (p.opacity <= 0 || p.dead) {
+                // Intercambio por el último para O(1) delete
+                this.particles[i] = this.particles[this.particles.length - 1];
+                this.particles.pop();
+            }
         }
+
 
         for (let i = this.victims.length - 1; i >= 0; i--) {
             const v = this.victims[i];

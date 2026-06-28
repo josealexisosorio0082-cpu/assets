@@ -209,132 +209,125 @@ const Bots = {
     think(bot, index, threshold, dt = 16.6) {
         const dtFactor = dt / 16.6;
         let forceX = 0, forceY = 0;
-        const viewDist = bot.tier === "pro" ? 1100 : (bot.tier === "intermediate" ? 800 : 500);
+        const viewDist = bot.tier === "pro" ? 1200 : (bot.tier === "intermediate" ? 900 : 600);
 
         // MÓDULO DE COMPORTAMIENTO HUMANO: Errores y distracciones
         if (bot.mistakeTimer > 0) {
             bot.mistakeTimer -= dtFactor;
-            // Durante un error, el bot se mueve erráticamente o se queda quieto
-            bot.tx += (Math.random() - 0.5) * 0.2;
-            bot.ty += (Math.random() - 0.5) * 0.2;
+            bot.tx += (Math.random() - 0.5) * 0.3;
+            bot.ty += (Math.random() - 0.5) * 0.3;
             return;
         }
 
-        // Probabilidad de distracción (más común en novatos)
-        const distractionChance = bot.tier === "pro" ? 0.001 : (bot.tier === "intermediate" ? 0.005 : 0.015);
+        const distractionChance = bot.tier === "pro" ? 0.0005 : (bot.tier === "intermediate" ? 0.003 : 0.012);
         if (Math.random() < distractionChance * dtFactor) {
-            bot.mistakeTimer = 30 + Math.random() * 60;
-            if (Math.random() < 0.3) this.triggerBotEmote(bot, "🤔");
+            bot.mistakeTimer = 20 + Math.random() * 50;
+            if (Math.random() < 0.2) this.triggerBotEmote(bot, "🤔");
             return;
         }
 
-        // MÓDULO DE ESTRATEGIA: Baiting (Cebo)
-        // El bot se queda quieto o se mueve lento para atraer a presas
-        if (bot.tier === "pro" && bot.mass > 500 && !closestThreat && Math.random() < 0.002 * dtFactor) {
-            bot.mistakeTimer = 40; // Se queda quieto 40 frames
-            bot.tx = 0; bot.ty = 0;
-            if (Math.random() < 0.5) this.triggerBotEmote(bot, "😴");
-            return;
-        }
-
-        bot.waver += 0.05 * dtFactor;
-        const waverAmount = bot.tier === "pro" ? 0.05 : 0.15;
-        forceX += Math.cos(bot.waver) * waverAmount;
-        forceY += Math.sin(bot.waver) * waverAmount;
-
-        if (bot.tier !== "pro" && Math.random() < 0.1 * dtFactor) {
-            bot.tx += (Math.random() - 0.5) * 0.4;
-            bot.ty += (Math.random() - 0.5) * 0.4;
-        }
+        // Movimiento base con "ruido" humano (Perlin-ish)
+        bot.waver += (0.04 + Math.random() * 0.02) * dtFactor;
+        const noiseX = Math.cos(bot.waver * 0.7) * 0.2;
+        const noiseY = Math.sin(bot.waver * 0.8) * 0.2;
+        forceX += noiseX; forceY += noiseY;
 
         let closestThreat = null;
-        let minDistThreat = bot.tier === "novice" ? 300 : (bot.tier === "intermediate" ? 600 : 900);
+        let minDistThreat = bot.tier === "novice" ? 400 : (bot.tier === "intermediate" ? 700 : 1000);
 
-        // Optimización con SpatialGrid para buscar amenazas y presas
         const nearbyEntities = SpatialGrid.query(bot.x, bot.y, minDistThreat);
 
         for (let i = 0; i < nearbyEntities.length; i++) {
             const other = nearbyEntities[i];
             if (other === bot) continue;
 
-            const dx = bot.x - other.x, dy = bot.y - other.y;
-            const d2 = dx * dx + dy * dy;
-            if (d2 < minDistThreat * minDistThreat && (other.mass || 0) > bot.mass * threshold) {
-                closestThreat = other;
-                minDistThreat = Math.sqrt(d2);
+            // Evitar virus si somos grandes
+            if (other.spikes && bot.mass > 60) {
+                const dx = bot.x - other.x, dy = bot.y - other.y;
+                const d2 = dx * dx + dy * dy;
+                const avoidRange = bot.radius + 100;
+                if (d2 < avoidRange * avoidRange) {
+                    const d = Math.sqrt(d2) || 1;
+                    forceX += (dx / d) * 5; forceY += (dy / d) * 5;
+                }
+                continue;
+            }
+
+            // Detectar amenazas reales
+            if (other.mass && other.mass > bot.mass * threshold) {
+                const dx = bot.x - other.x, dy = bot.y - other.y;
+                const d2 = dx * dx + dy * dy;
+                if (d2 < minDistThreat * minDistThreat) {
+                    closestThreat = other;
+                    minDistThreat = Math.sqrt(d2);
+                }
             }
         }
 
         if (closestThreat) {
             const dx = bot.x - closestThreat.x, dy = bot.y - closestThreat.y;
-            const d = Math.max(1, Math.sqrt(dx*dx + dy*dy));
+            const d = Math.sqrt(dx*dx + dy*dy) || 1;
 
-            // Reacción humana al peligro
-            if (d < 300 && Math.random() < 0.05) this.triggerBotEmote(bot, "😱");
+            // ESTRATEGIA DE EVASIÓN AVANZADA (Predictiva)
+            // Si la amenaza se mueve hacia nosotros, huimos con más fuerza
+            const threatVx = closestThreat.vx || 0;
+            const threatVy = closestThreat.vy || 0;
+            const dot = (threatVx * -dx + threatVy * -dy) / d;
+            const approachSpeed = Math.max(0, dot);
 
             let escapeX = dx / d, escapeY = dy / d;
-            if (bot.tier === "pro" && minDistThreat < 300) {
-                const angle = Math.atan2(dy, dx) + (Math.random() > 0.5 ? 0.4 : -0.4);
+
+            // Si somos Pro, intentamos orbitar o buscar ángulos de escape laterales si nos acorralan
+            if (bot.tier === "pro" && d < 400) {
+                const angle = Math.atan2(dy, dx) + (Math.random() > 0.5 ? 0.3 : -0.3);
                 escapeX = Math.cos(angle); escapeY = Math.sin(angle);
+                if (approachSpeed > 5 && Math.random() < 0.05) this.triggerBotEmote(bot, "😨");
             }
-            const strength = (minDistThreat < 250) ? 6 : 4;
+
+            const strength = 4 + (approachSpeed * 0.5) + (d < 200 ? 3 : 0);
             forceX += escapeX * strength; forceY += escapeY * strength;
         }
 
-        if (bot.mass > 60) {
-            const virusDist = bot.tier === "pro" ? 250 : 150;
-            const nearbyViruses = SpatialGrid.query(bot.x, bot.y, bot.radius + virusDist);
-            for (const v of nearbyViruses) {
-                if (!v.spikes) continue; // No es virus
-                const dx = bot.x - v.x, dy = bot.y - v.y;
-                const d2 = dx*dx + dy*dy;
-                if (d2 < (bot.radius + virusDist) * (bot.radius + virusDist)) {
-                    const d = Math.sqrt(d2) || 1;
-                    const strength = (bot.radius + virusDist - d) / 50;
-                    forceX += (dx / d) * strength * 5; forceY += (dy / d) * strength * 5;
-                }
-            }
-        }
-
-        if (!closestThreat || (bot.tier === "pro" && minDistThreat > 350)) {
+        // Búsqueda de Presas o Comida si no hay peligro inmediato
+        if (!closestThreat || (bot.tier === "pro" && minDistThreat > 450)) {
             let closestPrey = null;
             let minDistPrey = viewDist;
-            const nearbyPrey = SpatialGrid.query(bot.x, bot.y, viewDist);
 
-            for (const other of nearbyPrey) {
-                if (other === bot || (other.pursuerCount || 0) > 3) continue;
+            for (const other of nearbyEntities) {
+                if (other === bot || other.spikes || !other.mass) continue;
                 const dx = bot.x - other.x, dy = bot.y - other.y;
                 const d2 = dx*dx + dy*dy;
-                if (d2 < minDistPrey * minDistPrey && bot.mass > (other.mass || 0) * threshold) {
+                if (d2 < minDistPrey * minDistPrey && bot.mass > other.mass * threshold) {
                     closestPrey = other; minDistPrey = Math.sqrt(d2);
                 }
             }
 
-            if (closestPrey && bot.personality > 0.3) {
-                let targetX = closestPrey.x;
-                let targetY = closestPrey.y;
-
-                if (bot.rank.id === 'espectro' || bot.rank.id === 'deidad') {
-                    targetX = closestPrey.x + (closestPrey.vx || 0) * 12;
-                    targetY = closestPrey.y + (closestPrey.vy || 0) * 12;
-                }
+            if (closestPrey) {
+                // Intersección predictiva para rangos altos
+                let targetX = closestPrey.x + (closestPrey.vx || 0) * (bot.tier === "pro" ? 15 : 5);
+                let targetY = closestPrey.y + (closestPrey.vy || 0) * (bot.tier === "pro" ? 15 : 5);
 
                 const dx = targetX - bot.x, dy = targetY - bot.y;
                 const d = Math.sqrt(dx*dx + dy*dy) || 1;
-                forceX += (dx / d) * 3; forceY += (dy / d) * 3;
+                forceX += (dx / d) * 3.5; forceY += (dy / d) * 3.5;
 
-                if (bot.tier === "pro" && bot.mass > 100 && bot.mass > closestPrey.mass * 2.3 && d < bot.radius * 4 && Math.random() < 0.08) {
-                    this.botSplit(bot);
+                // SMART SPLIT: Solo si el objetivo es lo suficientemente pequeño y está cerca
+                if (bot.tier === "pro" && bot.mass > 120 && bot.mass > closestPrey.mass * 2.5 && d < 350) {
+                    // Verificar si hay virus en el camino antes de splitear
+                    const midX = bot.x + dx/2, midY = bot.y + dy/2;
+                    const hazard = SpatialGrid.query(midX, midY, 100).find(e => e.spikes);
+                    if (!hazard && Math.random() < 0.1) {
+                        this.triggerBotEmote(bot, "😈");
+                        this.botSplit(bot);
+                    }
                 }
             } else {
+                // Buscar comida
                 let bestFood = null;
-                let minDistFood = 600;
-                const nearbyFood = SpatialGrid.query(bot.x, bot.y, 600);
-
-                for (let k = 0; k < nearbyFood.length; k++) {
-                    const f = nearbyFood[k];
-                    if (f.mass !== undefined || f.spikes !== undefined) continue; // No es comida
-                    const dx = bot.x - f.x, dy = bot.y - f.y;
+                let minDistFood = 500;
+                for (const f of nearbyEntities) {
+                    if (f.mass !== undefined || f.spikes !== undefined) continue;
+                    const dx = f.x - bot.x, dy = f.y - bot.y;
                     const d2 = dx*dx + dy*dy;
                     if (d2 < minDistFood * minDistFood) {
                         bestFood = f; minDistFood = Math.sqrt(d2);
@@ -343,10 +336,11 @@ const Bots = {
                 if (bestFood) {
                     const dx = bestFood.x - bot.x, dy = bestFood.y - bot.y;
                     const d = Math.sqrt(dx*dx + dy*dy) || 1;
-                    forceX += (dx / d) * 1.5; forceY += (dy / d) * 1.5;
+                    forceX += (dx / d) * 2; forceY += (dy / d) * 2;
                 }
             }
         }
+
 
         const margin = 200;
         if (bot.x < margin) forceX += 3;

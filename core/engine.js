@@ -581,17 +581,17 @@ var Engine = {
 
         for (let j = 0; j < cells.length; j++) {
             const cell = cells[j];
-            const nearbyFood = SpatialGrid.query(cell.x, cell.y, cell.radius + 20);
+            // Solo buscar en un radio ligeramente superior para ahorrar procesamiento
+            const nearbyFood = SpatialGrid.query(cell.x, cell.y, cell.radius + 30);
 
             for (let i = 0; i < nearbyFood.length; i++) {
                 const f = nearbyFood[i];
-                if (f.mass !== undefined || f.spikes !== undefined) continue; // Si es bot/virus, saltar
-                if (f.isDying) continue;
+                // Ignorar si no es comida (bots/jugadores/virus tienen masa o spikes)
+                if (f.mass !== undefined || f.spikes !== undefined || f.isDying) continue;
 
                 const dx = cell.x - f.x, dy = cell.y - f.y;
                 const distSq = dx * dx + dy * dy;
 
-                // MÓDULO ECONÓMICO: Magneto de Slip Coins
                 let attractionRadius = cell.radius;
                 if (f.isCoin && window.EvolutionLab) {
                     const evoData = window.EvolutionLab.getUpgradeData();
@@ -619,6 +619,7 @@ var Engine = {
                 }
             }
         }
+
 
         Player.update(window.mouse, dt);
         if (window.Multiplayer) window.Multiplayer.sendUpdate();
